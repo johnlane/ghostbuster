@@ -1,120 +1,18 @@
 #!/usr/bin/env ruby
 
-LICENSE=%{
-Copyright (c) 2013 John Lane
+# MIT License: see LICENSE file for details
 
-MIT License
+require_relative 'environment'
+environment = GB_Environment.new
+second_environment = GB_Environment.new
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+puts second_environment.optval(:env)
+puts second_environment.path(:source)
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-http://www.opensource.org/licenses/mit-license.php
-}
-
-DESCRIPTION=%{
-Ghostbuster : Extract blog content from Ghost database into files
-
-This is a tool that extracts content from a Ghost (http://www.ghost.org)
-system into files. The primary use-case is to store post data into a
-version control system such as Git (http://www.git-scm.com).
-
-The extracted files may also be used to host a lightweight copy of the
-blog on a static web server. An index page is generated and this can
-be used as a landing page on such a static web server.
-
-Quick Start
------------
-
-Those that don't want to read the detail can try this:
-
-$ ghostbuster /path/to/content /path/to/repository
-
-Detail
-------
-
-    ghostbuster [OPTIONS] SOURCE [DESTINATION]
-
-Ghostbuster extracts content from the "content" directory of a Ghost
-directory tree. The SOURCE is the directory location of the Ghost
-installation whose contents should be extracted. The DESTINATION is
-the directory location to where the content should be extracted to.
-
-The following content is extracted :
-
-  1. Posts
-  2. Directories
-
-SOURCE is mandatory. If it does not end in '/content' then this will be
-added automatically, so "/path/to/ghost" and "/path/to/ghost/content"
-are equivalent. 
-
-DESTINATION is optional. If not given, the destination will be the same
-as SOURCE. Only posts will be extracted and they will be written to the
-SOURCE. 
-
-If SOURCE and DESTINATION are different then Ghostbuster will also copy
-the content directories specified by the --copydirs option, which should
-be given as a comma-separated list. If the --copydirs option is not used
-then a default value of "images,themes/active-theme" will be used where
-"active-theme" is the active theme defined by Ghost's settings page.
-
-Posts are written as separate files with names in the following format:
-
-  ID - TITLE.TYPE
-
-where ID is the post ID assigned by Ghost, TITLE is the post's title and
-TYPE is the file type: both html and markdown files will be written.
-
-In addition, an index.html file is written containing links to all posts.
-If the extracted files are placed on a web server, this can serve as a
-landing page. For example, point a local web browser directly at the
-extract destination (file://DESTINATION/index.html)
-
-Ghostbuster will, by default, extract all posts. To only extract posts
-that have been published, use the --published option.
-
-Posts will be extracted to html, markdown and yaml. To only extract to
-a subset of these, specify one or more of the --html, --markdown and
---yaml options.
-
-Operational requirements
-------------------------
-
-The sqlite3 and sanitize gems must be installed:
-
-  $ gem install sqlite3 sanitize
-
-Arch Linux package requirements:
-ruby     : runtime (ruby 2.0)
-devtools : may be required to install/build gems
-
-                   (c) John Lane 2013-11-14.
-                Licensed under the MIT License.
-
-                   Part of the Random Toolbox:
-             https://github.com/johnlane/random-toolbox
-
-}
+exit
 
 require 'sqlite3'  # gem install sqlite3
 require 'yaml'
-require 'optparse'
 require 'fileutils'
 require 'date'
 require 'sanitize' # gem install sanitize
@@ -138,56 +36,14 @@ def do_or_die(condition,log_message,error_message)
   condition ? log(log_message) : abort(error_message)
 end
 
-options = {}
-optparse = OptionParser.new do |opts|
-  opts.banner = DESCRIPTION
+# Load modules for output filters
+output_filters = []
+options[:formats].each do |f|
+  f = f.to_s
+  require_relative 'output_'+f
 
-  opts.on("--license", "show the MIT License") do |v|
-    puts LICENSE
-    exit 0
-  end
-
-  opts.on("-v", "--verbose", "Enable verbose message output") do |v|
-   $verbose = true
-  end
-
-  options[:env] = 'development'
-  opts.on("-e", "--environment ENV", "Environment to copy from") do |e|
-   options[:env] = e
-  end
-
-  opts.on("--copydirs COPYDIRS", "Specify directories to copy (comma-separated)") do |d|
-    options[:copydirs] = d
-  end
-
-  opts.on("--with-tags TAGS", "Include only posts with these tags (comma-separated)") do |d|
-    options[:with_tags] = d
-  end
-
-  opts.on("--without-tags TAGS", "Include only posts without these tags (comma-separated)") do |d|
-    options[:without_tags] = d
-  end
-
-  opts.on("-p", "--published", "Only published content") do |v|
-   options[:published] = true
-  end
-
-  options[:formats] = []
-  opts.on("--html", "Extract html") do |f|
-   options[:formats] << :html
-  end
-  opts.on("--markdown", "Extract Markdown") do |f|
-   options[:formats] << :markdown
-  end
-  opts.on("--yaml", "Extract YAML") do |f|
-   options[:formats] << :yaml
-  end
+  output_filters << Object.const_get('GB_OutputFilter_'+f).new
 end
-
-optparse.parse!
-
-# default format options if non explicitly given as arguments
-options[:formats] = [:html, :markdown, :yaml] if options[:formats].empty?
 
 # Positional arguments
 if ARGV.empty?
@@ -278,6 +134,9 @@ end
 
 query << whand << ' posts.published_at IS NOT NULL' if options[:published] 
 query << ' ORDER BY posts.published_at DESC'
+
+
+
 
 # Prepare html content parts
 if options[:formats].include? :html
