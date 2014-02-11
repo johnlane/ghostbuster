@@ -1,0 +1,565 @@
+#!/usr/bin/env ruby
+
+LICENSE=%{
+Copyright (c) 2013 John Lane
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+http://www.opensource.org/licenses/mit-license.php
+}
+
+DESCRIPTION=%{
+Ghostbuster : Extract blog content from Ghost database into files
+
+This is a tool that extracts content from a Ghost (http://www.ghost.org)
+system into files. The primary use-case is to store post data into a
+version control system such as Git (http://www.git-scm.com).
+
+The extracted files may also be used to host a lightweight copy of the
+blog on a static web server. An index page is generated and this can
+be used as a landing page on such a static web server.
+
+Quick Start
+-----------
+
+Those that don't want to read the detail can try this:
+
+$ ghostbuster /path/to/content /path/to/repository
+
+Detail
+------
+
+    ghostbuster [OPTIONS] SOURCE [DESTINATION]
+
+Ghostbuster extracts content from the "content" directory of a Ghost
+directory tree. The SOURCE is the directory location of the Ghost
+installation whose contents should be extracted. The DESTINATION is
+the directory location to where the content should be extracted to.
+
+The following content is extracted :
+
+  1. Posts
+  2. Directories
+
+SOURCE is mandatory. If it does not end in '/content' then this will be
+added automatically, so "/path/to/ghost" and "/path/to/ghost/content"
+are equivalent. 
+
+DESTINATION is optional. If not given, the destination will be the same
+as SOURCE. Only posts will be extracted and they will be written to the
+SOURCE. 
+
+If SOURCE and DESTINATION are different then Ghostbuster will also copy
+the content directories specified by the --copydirs option, which should
+be given as a comma-separated list. If the --copydirs option is not used
+then a default value of "images,themes/active-theme" will be used where
+"active-theme" is the active theme defined by Ghost's settings page.
+
+Posts are written as separate files with names in the following format:
+
+  ID - TITLE.TYPE
+
+where ID is the post ID assigned by Ghost, TITLE is the post's title and
+TYPE is the file type: both html and markdown files will be written.
+
+In addition, an index.html file is written containing links to all posts.
+If the extracted files are placed on a web server, this can serve as a
+landing page. For example, point a local web browser directly at the
+extract destination (file://DESTINATION/index.html)
+
+Ghostbuster will, by default, extract all posts. To only extract posts
+that have been published, use the --published option.
+
+Posts will be extracted to html, markdown and yaml. To only extract to
+a subset of these, specify one or more of the --html, --markdown and
+--yaml options.
+
+Operational requirements
+------------------------
+
+The sqlite3 and sanitize gems must be installed:
+
+  $ gem install sqlite3 sanitize
+
+Arch Linux package requirements:
+ruby     : runtime (ruby 2.0)
+devtools : may be required to install/build gems
+
+                   (c) John Lane 2013-11-14.
+                Licensed under the MIT License.
+
+                   Part of the Random Toolbox:
+             https://github.com/johnlane/random-toolbox
+
+}
+
+require 'sqlite3'  # gem install sqlite3
+require 'yaml'
+require 'optparse'
+require 'fileutils'
+require 'date'
+require 'sanitize' # gem install sanitize
+
+# Map Handlebars date format specifiers to ruby Date.strftime format specifiers
+DATEFORMAT = {'YYYY'=>'%Y','MM'=>'%m', 'MMM'=>'%^b','DD'=>'%d'}
+
+# Map field to join-table names
+JOIN_MAP = {'author' => 'users'}
+
+def abort(m)
+  puts("#{m}. Cannot continue.")
+  exit 1
+end
+
+def log(m)
+  puts m if $verbose
+end
+
+def do_or_die(condition,log_message,error_message)
+  condition ? log(log_message) : abort(error_message)
+end
+
+options = {}
+optparse = OptionParser.new do |opts|
+  opts.banner = DESCRIPTION
+
+  opts.on("--license", "show the MIT License") do |v|
+    puts LICENSE
+    exit 0
+  end
+
+  opts.on("-v", "--verbose", "Enable verbose message output") do |v|
+   $verbose = true
+  end
+
+  options[:env] = 'development'
+  opts.on("-e", "--environment ENV", "Environment to copy from") do |e|
+   options[:env] = e
+  end
+
+  opts.on("--copydirs COPYDIRS", "Specify directories to copy (comma-separated)") do |d|
+    options[:copydirs] = d
+  end
+
+  opts.on("--with-tags TAGS", "Include only posts with these tags (comma-separated)") do |d|
+    options[:with_tags] = d
+  end
+
+  opts.on("--without-tags TAGS", "Include only posts without these tags (comma-separated)") do |d|
+    options[:without_tags] = d
+  end
+
+  opts.on("-p", "--published", "Only published content") do |v|
+   options[:published] = true
+  end
+
+  options[:formats] = []
+  opts.on("--html", "Extract html") do |f|
+   options[:formats] << :html
+  end
+  opts.on("--markdown", "Extract Markdown") do |f|
+   options[:formats] << :markdown
+  end
+  opts.on("--yaml", "Extract YAML") do |f|
+   options[:formats] << :yaml
+  end
+end
+
+optparse.parse!
+
+# default format options if non explicitly given as arguments
+options[:formats] = [:html, :markdown, :yaml] if options[:formats].empty?
+
+# Positional arguments
+if ARGV.empty?
+  puts optparse
+  exit 1
+end
+
+source = ARGV[0].dup
+config = "#{source}/config.js"
+source << "/content" unless File.basename(source) == 'content'
+destination = ARGV.count >1 ? ARGV[1] : options[:source]
+database = source+"/data/ghost-dev.db"
+
+# Check source is valid
+do_or_die(File.directory?(source),'source is good',"'#{source} is not a directory")
+
+# Check destination is valid
+do_or_die(File.directory?(destination),'destination is good', "'#{destination}' is not a directory")
+
+# Get environment data from config file
+do_or_die(File.exists?(config),'Configuration found',"'#{config} was not found")
+do_or_die(config = File.read(config),"read config ok","read #{config} failed")
+config.gsub!(/^\s*?\/\/.*?\n/m,'') # remove comments from config
+
+# Get database file from config
+match_dbfile = config.match(/#{options[:env]}:\s*{.*?database:\s*{.*?connection:\s*{.*?filename:.*?([\w-]*?\.db)/m)
+database = match_dbfile.nil? ? abort("unable to find database file name for '#{options[:env]}' environment in configuration file") : source+'/data/'+match_dbfile[1]
+#database = source+'/data/'+config.match(/#{options[:env]}:\s*{.*?database:\s*{.*?connection:\s*{.*?filename:.*?([\w-]*?\.db)/m)[1]
+
+# initialise database
+do_or_die(File.exists?(database),'database found',"Cannot find database file #{database}")
+do_or_die(db = SQLite3::Database.new(database),'database opened',"Could not initialise database #{database}")
+
+# read settings
+settings = %w[title description logo cover activeTheme]
+query = "select key,value from settings where key in (#{settings.map{|s|"'#{s}'"}.join(',')})"
+settings = {}
+do_or_die(db.execute(query).each{|s| settings.update s[0].to_sym => s[1]},
+          'read settings','unable to read settings')
+
+match_url = config.match(/#{options[:env]}:\s*{.*?url:\s*['"](.*?)['"]/m)
+settings[:url] = match_url.nil? ? abort("unable to find URL for '#{options[:env]}' environment in configuration file") : match_url[1]
+
+settings.each { |k,v| puts "setting(#{k}) = #{v}" }
+
+# Copy directories unless source and destination are the same
+unless source == destination
+  if options[:copydirs].nil?
+    copydirs = [ 'images' ]
+    copydirs << 'themes/'+settings[:activeTheme] unless settings[:activeTheme].nil?
+  else
+     copydirs = options[:copydirs].split(',')
+  end
+  copydirs.each do |d|
+    d.insert(0,source+'/') # prepend source directory
+    abort ("Cannot find directory '#{d}'") unless File.directory? d
+    log("copying '#{d}' to '#{destination}'")
+    FileUtils.cp_r(d,destination,preserve: true)
+  end
+end
+
+# Extract posts into files
+db.results_as_hash = true
+query =  'SELECT posts.*, users.name as author_name from posts' \
+     << ' INNER JOIN users ON posts.author_id = users.id'
+
+whand = ' WHERE' # initially 'where' but 'and' for subsequent clauses
+unless options[:with_tags].nil?
+  query << whand << ' EXISTS (' \
+        <<   'SELECT 1 FROM posts_tags' \
+        <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
+        <<   ' WHERE posts_tags.post_id = posts.id' \
+        <<   ' AND tags.name IN (' \
+        <<   options[:with_tags].split(',').map {|t| "'#{t}'" }.join(',') \
+        <<   '))'
+  whand = ' AND'
+end
+
+unless options[:without_tags].nil?
+  query << whand << ' NOT EXISTS (SELECT 1 FROM posts_tags' \
+        <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
+        <<   ' WHERE posts_tags.post_id = posts.id' \
+        <<   ' AND tags.name IN (' \
+        <<   options[:without_tags].split(',').map {|t| "'#{t}'" }.join(',') \
+        <<   '))'
+  whand = ' AND'
+end
+
+query << whand << ' posts.published_at IS NOT NULL' if options[:published] 
+query << ' ORDER BY posts.published_at DESC'
+
+# Prepare html content parts
+if options[:formats].include? :html
+
+  # Collect HTML from theme
+  themedir = source + '/themes/'+settings[:activeTheme]
+  do_or_die(File.directory?(themedir),'theme directory ok',"'#{themedir} is not a directory")
+  html = Hash.new
+  %w(default index post).each do |f|
+    do_or_die(html[f] = File.read("#{themedir}/#{f}.hbs"),"read #{f}.hbs ok","read #{f}.hbs failed")
+
+    # Remove a brace when there are three; simplify onward processing
+    html[f].gsub!(/{{{/,'{{')
+    html[f].gsub!(/}}}/,'}}')
+
+    html[f].gsub!(/{{!(.*?)}}/m,'<!--\1-->') # Change handlebars comments to HTML
+
+    # Ignore some handlebars - turn them into comments
+    html[f].gsub!(/{{(ghost_head|ghost_foot)}}/,'<!--\1-->')
+
+    # Substitute handlebars if/else blocks where the "if" checks a setting
+    # http://rubular.com/r/Rw20G35Wwj
+    html[f].gsub!(/{{#if @blog.([a-z]+)}}\s(.*?)({{else}}\s(.*?))?{{\/if}}/m) do
+      settings[$~.captures[0].to_sym] ? $~.captures[1] : $~.captures[3] 
+    end
+
+    # Remove handlebars #if ... /if
+#    html[f].gsub!(/(.*){{#if.*?}}(.*){{\/if}}(.*)/,'\1 \2 \3')
+
+    # Formatted date
+    html[f].gsub!(/{{date format=['"](.*?)['"]}}/) do
+      format = $~[1]
+      format.gsub!(/([A-Z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
+      Date.new(1967,11,24).strftime(format)
+    end
+
+    # Expand settings (http://rubular.com/r/toLo7a2FYQ)
+    html[f].gsub!(/{{(@blog\.|meta_)([a-z]+)}}/) do
+        setting = $~.captures[1].to_sym
+        settings[setting] unless settings[setting].nil?
+    end
+
+  end
+
+  # Split the index html into three parts: the top, the post and the bottom
+  # The post part is repeated for each post on the index page
+  splits = html['index'].split(/{{#foreach posts}}/)
+  html['index-top'] = splits[0]
+  html['index-post'], html['index-bottom'] = splits[1].split(/{{\/foreach}}/)
+
+  # Start the html index
+  html_index = html['index-top']
+
+end
+
+#  query << " LIMIT 1"
+puts "Posts query:---------------------------------"
+puts query
+puts "---------------------------------------------"
+db.execute(query) do |post|
+
+  # Base filename and path for this post
+  file_name = "#{post['id']} - #{post['title'].gsub('/',':')}"
+  file_path = "#{destination}/#{file_name}"
+
+  # the update timestamp will be set on the files
+  update_time = DateTime.strptime(post['updated_at'].to_s,'%Q').to_time
+  publish_date = post['published_at'].to_s
+  publish_date = publish_date =~ /\d{13}/ ? DateTime.strptime(publish_date,'%Q').strftime("%d %b %Y") : '(draft)'
+
+  # HTML-specific formatting
+  if options[:formats].include? :html
+
+    # Make a copy of the html for this post
+    post_html = html['default'].gsub(/{{body}}/,html['post'])
+
+    # Remove post Handlebars wrappers
+    post_html.gsub!(/{{[#\/]post}}/,'')
+
+    # Insert the post content
+    post_html.gsub!(/{{content}}/,post['html'])
+    
+    # Substitute handlebars if/else blocks where the "if" checks a field
+    # when expression looks for field f, this tests for presence of f or f_id
+    post_html.gsub!(/{{#if ([a-z]+)}}\s(.*?)({{else}}\s(.*?))?{{\/if}}/m) do
+      if post[$~.captures[0]]
+        $~.captures[1]
+      elsif post[$~.captures[0]+'_id']
+        $~.captures[1]
+      else
+        $~.captures[3]
+      end
+    end
+
+    # Substitute handlebars if/else blocks where the "if" checks a join field
+    # when expression looks for field f, this tests for presence of f or f_id
+    # http://rubular.com/r/eTWYVU4Led
+    post_html.gsub!(/{{#if ([a-z]+)}}(.*){{\/if}}/) do
+      query = "SELECT count(*) FROM posts_#{$~.captures[0]} WHERE post_id = #{post['id']}"
+      $~.captures[1] if db.execute(query).first[0] > 0
+    end
+
+    # Substitute handlebars flield value-list references (http://rubular.com/r/PovCjZnXpT)
+    post_html.gsub!(/{{([a-z]+s)\s(.*?)}}/) do
+      dt = $~.captures[0]  # data table   - where the value comes from
+      lt = "posts_"+dt     # lookup table - where the post id is dereferenced
+      query = "SELECT dt.name FROM #{lt} lt JOIN #{dt} dt ON dt.id = lt.#{dt.chop+'_id'} WHERE lt.post_id = #{post['id']}"
+      r = db.execute(query)
+      r.map! {|r| r['name']} # just get names
+      r.join($~.captures[2]) # join with separator
+    end
+
+    # Substitute handlebars field references (http://rubular.com/r/imFrTmzCzz)
+    # when expression is of the form f return value of post.f
+    # when expression is of the form t.f will join to table t and return value of f
+    post_html.gsub!(/{{([a-z]+)(\.([a-z]+)+)?}}/) do
+      if $~.captures[2].nil?
+        post[$~.captures[0]]
+      else
+        join_table = JOIN_MAP[$~.captures[0]] ? JOIN_MAP[$~.captures[0]] : $~.captures[0]
+        join = "SELECT #{$~.captures[2]} from #{join_table} WHERE id = '#{post[$~.captures[0]+'_id']}'"
+        db.execute(join).first[$~.captures[2]]
+      end
+    end
+
+    # Expand body_class
+    query = "SELECT t.name FROM posts_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = #{post['id']}"
+    r = db.execute(query)
+    tagcss = r.map! {|r| 'tag-'+r['name'].downcase}.join(' ') # tag names as CSS class IDs
+    post_html.gsub!(/{{body_class}}/,"post-template "+tagcss)
+    post_html.gsub!(/{{post_class}}/,"post "+tagcss)
+
+    # Strip HTML comments (http://rubular.com/r/jd7C1Hdl0l)
+    post_html.gsub!(/<!--.*?-->/m,'')
+    post_html.gsub!(/^\s*$/m,'')      # strip empty lines
+
+    log("writing html for post '#{post['title']}'")
+    file_name_extn = "#{file_name}.html"
+    file_path_extn = "#{file_path}.html"
+
+    # write file and time-stamp it
+    File.open(file_path_extn, 'w') {|f| f.write(post_html) }
+    File.utime(Time.now,update_time,file_path_extn)
+
+    # add an entry to the index
+    index_post = html['index-post']
+    
+
+  end
+
+  # write markdown
+  if options[:formats].include? :markdown
+    log("writing markdown for post '#{post['title']}'")
+    file_name_extn = "#{file_name}.md"
+    file_path_extn = "#{file_path}.md"
+    File.open(file_path_extn, 'w') {|f| f.write(post['markdown']) }
+    File.utime(Time.now,update_time,file_path_extn)
+
+    # write markdown hyperlink to the index entry
+    #html_index << '<a href="' + file_name_extn + '">(md)</a>' if options[:formats].include? :html
+  end
+
+  # remove the fields that are in a file (so not written to yaml later on)
+  post.delete('html')
+  post.delete('markdown')
+
+  # hash contains data twice - with feld-name keys and with numeric index keys
+  post.delete_if {|k,v| k.is_a? Fixnum} 
+
+  # format dates as human-readable
+  post.each do |k,v|
+    post[k] = DateTime.strptime(v.to_s,'%Q').strftime("%Y-%m-%d %H:%M:%S.%L %Z") if v.to_s =~ /\d{13}/
+  end
+
+  # write everything that remains to yaml
+  if options[:formats].include? :yaml
+    log("writing yaml for post '#{post['title']}'")
+    File.open("#{file_path}.yml", 'w') {|f| f.write(post.to_yaml) }
+
+    # write yml hyperlink to the index file
+    #html_index << '<a href="' + file_path + '.yml">(yml)</a>' if options[:formats].include? :html
+  end
+
+end
+
+log("finished")
+exit
+
+  
+
+
+db.execute(query) do |post|
+  file_name = "#{post['id']} - #{post['title'].gsub('/',':')}"
+  file_path = "#{destination}/#{file_name}"
+ 
+  # the update timestamp will be set on the files
+  update_time = DateTime.strptime(post['updated_at'].to_s,'%Q').to_time
+  publish_date = post['published_at'].to_s
+  publish_date = publish_date =~ /\d{13}/ ? DateTime.strptime(publish_date,'%Q').strftime("%d %b %Y") : '(draft)'
+
+  # write html
+  if options[:formats].include? :html
+    publish_html = '<span class="post-meta"><time>' + publish_date + '</span>'
+
+    log("writing html for post '#{post['title']}'")
+    file_name_extn = "#{file_name}.html"
+    file_path_extn = "#{file_path}.html"
+
+    # get html content
+    content = post['html']
+
+    # get a plain-text excerpt from content for the index page
+    content.gsub!('/content/','') # so local urls work in the html
+    excerpt = Sanitize.clean(post['html'])[0..250]
+
+    # wrte html for the post page
+#    html = html_head + nl
+#    html << publish_html
+#    html << '<h1>'+post['title']+'</h1>'
+#    html << '<section class="post-content">'+content+'</section>'
+#    html << html_foot
+
+     html = html['post-head'] + nl
+     html << publish_html
+
+    # write file and time-stamp it
+    File.open(file_path_extn, 'w') {|f| f.write(html) }
+    File.utime(Time.now,update_time,file_path_extn)
+
+    # write entry to the index page for this post
+    html_index << '<article class="post"><header class="post-header">'
+    html_index << publish_html
+    html_index << '<h2 class="post-title"><a href="' + file_name_extn + '">' + post['title'] + '</a></h2>'
+    html_index << '<section class="post-excerpt"><p>'+excerpt+'&hellip;</p>'
+    html_index << '<p style="font-size:small">' if options[:formats].count > 1
+  end
+
+  # write markdown
+  if options[:formats].include? :markdown
+    log("writing markdown for post '#{post['title']}'")
+    file_name_extn = "#{file_name}.md"
+    file_path_extn = "#{file_path}.md"
+    File.open(file_path_extn, 'w') {|f| f.write(post['markdown']) }
+    File.utime(Time.now,update_time,file_path_extn)
+
+    # write markdown hyperlink to the index entry
+    html_index << '<a href="' + file_name_extn + '">(md)</a>' if options[:formats].include? :html
+  end
+
+  # remove the fields that are in a file (so not written to yaml later on)
+  post.delete('html')
+  post.delete('markdown')
+
+  # hash contains data twice - with feld-name keys and with numeric index keys
+  post.delete_if {|k,v| k.is_a? Fixnum} 
+
+  # format dates as human-readable
+  post.each do |k,v|
+    post[k] = DateTime.strptime(v.to_s,'%Q').strftime("%Y-%m-%d %H:%M:%S.%L %Z") if v.to_s =~ /\d{13}/
+  end
+
+  # write everything that remains to yaml
+  if options[:formats].include? :yaml
+    log("writing yaml for post '#{post['title']}'")
+    File.open("#{file_path}.yml", 'w') {|f| f.write(post.to_yaml) }
+
+    # write yml hyperlink to the index file
+    html_index << '<a href="' + file_path + '.yml">(yml)</a>' if options[:formats].include? :html
+  end
+
+  # end this post in the index
+  if options[:formats].include? :html
+    html_index << '</p>' if options[:formats].count > 1
+    html_index << '</section></article>'
+  end
+end
+
+# write the html index file
+if options[:formats].include? :html
+  log("writing index")
+  html_index << html_foot
+  File.open("#{destination}/index.html", 'w') {|f| f.write(html_index) }
+end
+
+log("finished")
