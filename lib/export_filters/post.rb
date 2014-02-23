@@ -1,0 +1,124 @@
+require 'sanitize' # gem install sanitize
+module Post
+
+    def file_extension=(e)
+      @extn = e
+    end
+
+    # Get key, return its value, applying optional modifiers
+    # This just invokes a method with the key's name. If there is no such
+    # method defined then 'method missing' performs the get_key task. 
+    def get_key(key,modifiers)
+      send(key,modifiers)
+    end
+
+    # Return the URL for the current post. Relative unless :absolute modifier given.
+    def url(*args)
+      modifiers(args)[:absolute] == 'true' ? setting(:url)+'/'+filename : filename
+    end
+
+    def filename
+      "#{slug}.#{@extn}"
+    end
+
+    def file_extension
+      @extn
+    end
+
+    # returns the update time as a Time object
+    def update_timestamp
+      DateTime.strptime(updated_at.to_s,'%Q').to_time
+    end
+
+    # Map generic date format specifiers to ruby Date.strftime format specifiers
+    DATEFORMAT = {'YYYY'=>'%Y','MM'=>'%m', 'MMM'=>'%b','DD'=>'%d'}
+
+    # Returns the published date (or 'draft'). Supports a :format modifier
+    def date(*args)
+
+       if args and modifiers(args)[:format]
+         format = modifiers(args)[:format].gsub!(/([A-Z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
+       else
+         format = '%d %b %Y'
+       end
+
+       date = published_at.to_s
+       date =~ /\d{13}/ ? DateTime.strptime(date,'%Q').strftime(format) : '(draft)'
+    end
+
+    # returns an html-escaped and whitespace-condensed excerpt from the html
+    def excerpt(*args)
+      Sanitize.clean(html).gsub(/\s+/, ' ')[0..250]
+    end
+
+    # Handle a request for a key value that is not handled by an explicit method
+    def method_missing(m, *args)
+      debug("Requesting '#{m}'; args='#{args}")
+
+      # Request is a field or a table.field
+      m = m.to_s.match(/((?'table'[a-z_]+)\.)?(?'field'[a-z_]+)/)
+      t = m[:table]
+      f = m[:field]
+      debug("Table: '#{t}'; Field: '#{f}'")
+
+      if t
+        value = join(f,t)
+      else
+        if has_key? f                 # if there is a key with this name, get its value
+          value = self[f]
+        elsif f[-1,1] == 's'          # if key ends in s, try a join
+          value = join(f)
+          separator = modifiers(args)[:separator]
+          separator = ', ' if separator.nil?
+          value = value.join(separator)
+        elsif setting(f)              # try the key as a setting
+          value = setting(f)
+        else
+          abort "What do you mean, '#{f}' ???"
+          exit
+          value = nil
+        end
+      end
+        
+      return value
+    end
+
+private
+
+    # Map field to join-table names
+    JOIN_MAP = {'author' => 'users'}
+
+    # Retrieve key values through a join table
+    def join(field, table=nil)
+
+      if table.nil?
+        # table not given, look up values in join table for has_many field (e.g. 'tags')
+        # return multiple values as an array
+        join = "posts_"+field     # lookup table - where the post id is dereferenced
+        query = "SELECT t.name FROM #{join} j JOIN #{field} t ON t.id = j.#{field.chop+'_id'} WHERE j.post_id = #{id}"
+        r = db.execute(query)
+        r.map! {|r| r['name']} # just get names
+      else
+        # table given, look up field in given table using related id as join field
+        join_table = JOIN_MAP[table] ? JOIN_MAP[table] : table
+        join = "SELECT #{field} from #{join_table} WHERE id = '#{self[table+'_id']}'"
+        db.execute(join).first[field]
+      end
+    end
+
+    # returns a hash of modifiers from a string
+    def modifiers(s)
+      # Some fields support modifiers. They can be supplied as a hash or a string
+      # If supplied as a string, expand them into a hash
+      modifiers = s.nil? ? Hash.new : s
+      modifiers = modifiers.join(' ') if modifiers.is_a? Array
+      if modifiers.is_a?(String)
+        mods = {} # (http://rubular.com/r/LpvX7hBlmw)
+        modifiers.match(/([a-z]*)=["'](.*?)["']/) { |m| mods[m[1].to_sym] = m[2] }
+        modifiers = mods
+      end
+      return modifiers
+    end
+
+end
+

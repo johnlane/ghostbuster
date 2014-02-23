@@ -1,70 +1,54 @@
-Ghostbuster : Extract blog content from Ghost database into files
+GhostBuster
+===========
 
-This is a tool that extracts content from a Ghost (http://www.ghost.org)
-system into files. The primary use-case is to store post data into a
-version control system such as Git (http://www.git-scm.com).
+GhostBuster is an export utility for use with the Ghost blogging platform
+(http://ghost.org). This is a brief outline; for further information please
+refer the documentation - it can be found in the "doc" directory.
 
-The extracted files may also be used to host a lightweight copy of the
-blog on a static web server. An index page is generated and this can
-be used as a landing page on such a static web server.
+It uses *export filters* to export the contents of a Ghost blog into various
+formats including a basic backup and static HTML representations of the blog.
 
-Quick Start
------------
+It has *publishers* that publish the exported content onto other platforms.
+
+Ghost has an extendable design that makes it easy to create new export filters
+and publishers. 
+
+LICENSE
+-------
+
+GhostBuster is released under the terms of the MIT LICENSE. For the full
+wording of the license please either:
+
+* refer to the LICENSE file contained within this distribution, or
+* run the command `ghostbuster --license`, or
+* visit http://github.com/johnlane/ghostbuster/LICENSE
+
+USAGE
+-----
 
 Those that don't want to read the detail can try this:
 
-$ ghostbuster /path/to/content /path/to/repository
+    $ ghostbuster /path/to/content /path/to/export/to
 
-Detail
-------
+Please refer to the documentation for full usage instructions. The
+following documentation is available:
 
-    ghostbuster [OPTIONS] SOURCE [DESTINATION]
+* For basic help, refer to the "doc/HELP" file or run the command
+  `ghostbuster --help`.
 
-Ghostbuster extracts content from the "content" directory of a Ghost
-directory tree. The SOURCE is the directory location of the Ghost
-installation whose contents should be extracted. The DESTINATION is
-the directory location to where the content should be extracted to.
+* For detailed usage instructions, refer to the "doc/USERGUIDE" file
 
-The following content is extracted :
+* For information about extending GhostBuster by writing new export filters 
+  or publishers, refer to the "doc/EXTENDING" file
 
-  1. Posts
-  2. Directories
+SUPPORT
+-------
 
-SOURCE is mandatory. If it does not end in '/content' then this will be
-added automatically, so "/path/to/ghost" and "/path/to/ghost/content"
-are equivalent. 
+For support please contact the author via GitHub. Feel free to fix bugs or
+extend functionality and send a pull request via GitHub.
 
-DESTINATION is optional. If not given, the destination will be the same
-as SOURCE. Only posts will be extracted and they will be written to the
-SOURCE. 
-
-If SOURCE and DESTINATION are different then Ghostbuster will also copy
-the content directories specified by the --copydirs option, which should
-be given as a comma-separated list. If the --copydirs option is not used
-then a default value of "images,themes/active-theme" will be used where
-"active-theme" is the active theme defined by Ghost's settings page.
-
-Posts are written as separate files with names in the following format:
-
-  ID - TITLE.TYPE
-
-where ID is the post ID assigned by Ghost, TITLE is the post's title and
-TYPE is the file type: both html and markdown files will be written.
-
-In addition, an index.html file is written containing links to all posts.
-If the extracted files are placed on a web server, this can serve as a
-landing page. For example, point a local web browser directly at the
-extract destination (file://DESTINATION/index.html)
-
-Ghostbuster will, by default, extract all posts. To only extract posts
-that have been published, use the --published option.
-
-Posts will be extracted to html, markdown and yaml. To only extract to
-a subset of these, specify one or more of the --html, --markdown and
---yaml options.
-
-Operational requirements
-------------------------
+DEPENDENCIES
+------------
 
 The sqlite3 and sanitize gems must be installed:
 
@@ -74,10 +58,8 @@ Arch Linux package requirements:
 ruby     : runtime (ruby 2.0)
 devtools : may be required to install/build gems
 
-                   (c) John Lane 2013-11-14.
+                     (c) John Lane 2014
                 Licensed under the MIT License.
-
-                   Part of the Random Toolbox:
-             https://github.com/johnlane/random-toolbox
+             https://github.com/johnlane/ghostbuster
 
 
