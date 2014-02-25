@@ -6,8 +6,9 @@ class ExportFilter_html < ExportFilter
 
   def initialize(e)
     super
-
+    abort "Cannot export HTML without an active theme" if setting(:activeTheme).nil?
     load
+    copy [ 'images', 'themes/'+setting(:activeTheme) ]
   end
 
   # Output a post

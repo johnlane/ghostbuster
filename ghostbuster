@@ -5,27 +5,7 @@
 require_relative 'lib/environment'
 include Environment
 
-include Helpers
-
 #debug_on
-
-require 'fileutils'
-
-# Copy directories unless source and destination are the same
-unless path(:source) == path(:destination)
-  if option(:copydirs).nil?
-    copydirs = [ 'images' ]
-    copydirs << 'themes/'+setting(:activeTheme) unless setting(:activeTheme).nil?
-  else
-     copydirs = option(:copydirs).split(',')
-  end
-  copydirs.each do |d|
-    d.insert(0,path(:source)+'/') # prepend source directory
-    abort ("Cannot find directory '#{d}'") unless File.directory? d
-    log("copying '#{d}' to '#{path(:destination)}'")
-    FileUtils.cp_r(d,path(:destination),preserve: true)
-  end
-end
 
 posts do |post|
 

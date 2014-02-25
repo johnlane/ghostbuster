@@ -1,3 +1,5 @@
+require 'fileutils'
+
 class ExportFilter
 
   def initialize(e)
@@ -34,6 +36,24 @@ protected
     File.utime(Time.now,timestamp,f) unless timestamp.nil?
 
   end
+
+  # Copy directories unless source and destination are the same
+  def copy(copydirs)
+    unless path(:source) == path(:destination)
+      copydirs = copydirs.split(',') if copydirs.is_a? String
+      abort("Export filter can't copy #{p option(:copydirs)}") unless copydirs.is_a? Array
+
+      copydirs.each do |src|
+        dest = src.dup
+        src.insert(0,path(:source)+'/')       # prepend source directory
+        dest.insert(0,path(:destination)+'/') # prepend destination directory
+        FileUtils.mkdir_p(dest)               # ensure dest intermediate dirs exist
+        log("copying '#{src}' to '#{dest}'")
+        FileUtils.cp_r(src,dest,preserve: true)
+      end
+    end
+  end
+
 
 private
 

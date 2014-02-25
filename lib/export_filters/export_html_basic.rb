@@ -10,6 +10,8 @@ class ExportFilter_html_basic < ExportFilter
   def initialize(e)
     super
     prepare_html
+    theme = setting(:activeTheme) ? setting(:activeTheme) : 'casper'
+    copy [ 'images', 'themes/'+theme+'/assets/css' ]
   end
 
   # Output a post

@@ -77,10 +77,6 @@ private
        @options[:env] = e
       end
     
-      opts.on("--copydirs COPYDIRS", "Specify directories to copy (comma-separated)") do |d|
-        @options[:copydirs] = d
-      end
-    
       opts.on("--with-tags TAGS", "Include only posts with these tags (comma-separated)") do |d|
         @options[:with_tags] = d
       end
