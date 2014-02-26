@@ -1,40 +1,50 @@
-module Environment
-  extend self
-
-  require_relative('helpers')
-  include Helpers
-
-  require 'optparse'
-  require 'sqlite3'  # gem install sqlite3
+require_relative('helpers')
+require 'optparse'
+require 'sqlite3'  # gem install sqlite3
+class Environment
 
   # Accessors
-  def option(o)
-    defined?(@options) ? @options[o.to_sym] : Environment.option(o)
+  module Accessors
+    def option(o)
+      defined?(@options) ? @options[o.to_sym] 
+                 : defined?(@environment) ? @environment.option(o) : Environment.option(o)
+    end
+
+    def path(p)
+      defined?(@paths) ? @paths[p.to_sym]
+                 : defined?(@environment) ? @environment.path(p) : Environment.path(p)
+    end
+    def setting(p)
+      defined?(@settings) ? @settings[p.to_sym]
+                 : defined?(@environment) ? @environment.setting(p) : Environment.setting(p)
+    end
+    def export_filters
+      defined?(@export_filters) ? @export_filters
+                 : defined?(@environment) ? @environment.export_filters : Environment.export_filters
+    end
+
+    def db
+    defined?(@db) ? @db : defined?(@environment) ? @environment.db  : Environment.db
+    end
+
+    def posts
+      log "Running posts query\n#{query(:posts)}"
+      db.execute(query(:posts)) { |p| yield p }
+    end
+
+    def query(p)
+      defined?(@queries) ? @queries[p] 
+                       : defined?(@environment) ? @environment.query(p) : Environment.query(p)
+    end
   end
-  def path(p)
-    defined?(@paths) ? @paths[p.to_sym] : Environment.path(p)
-  end
-  def setting(p)
-    defined?(@settings) ? @settings[p.to_sym] : Environment.setting(p)
-  end
-  def posts
-    log "Running posts query\n#{query(:posts)}"
-    db.execute(query(:posts)) { |p| yield p }
-  end
-  def export_filters
-    defined?(@export_filters) ? @export_filters : Environment.export_filters
-  end
+
+  class << self
+
+  include Helpers
+
+  include Accessors
 
 protected
-
-  def db
-    defined?(@db) ? @db : Environment.db
-  end
-  def query(p)
-    defined?(@queries) ? @queries[p] : Environment.query(p)
-  end
-
-private
 
   # Private accessors
   def options
@@ -214,8 +224,9 @@ private
 
   end
 
+end
 
   # Load the environment
-  load_environment
+  self.load_environment
 
 end

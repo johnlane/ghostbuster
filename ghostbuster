@@ -3,9 +3,10 @@
 # MIT License: see LICENSE file for details
 
 require_relative 'lib/environment'
-include Environment
+include Environment::Accessors
+include Helpers
 
-#debug_on
+# Environment::debug_on
 
 posts do |post|
 

@@ -25,6 +25,8 @@
 # Required: see https://github.com/johnlane/random-toolbox/blob/master/usr/bin/ghostbuster
 GHOSTBUSTER=/root/adm/gb2/ghostbuster
 GHOST=/srv/ghost          # Extract and publish from Ghost installed at this path
+#EXPORT=html_basic        # Exporter to use
+EXPORT=html               # Exporter to use
 FTP_SERVER="johnlane.ie"  # Upload published archive to this web server
 
 # work in /tmp (write permission to create temporary files assumed)
@@ -32,7 +34,7 @@ cd /tmp
 
 echo exporting published blog
 tmpdir=$(mktemp -d) # export to temporary directory
-"${GHOSTBUSTER}" "${GHOST}" $tmpdir --html --without-tags=private,Amylum --published -u http://johnlane.ie -v
+"${GHOSTBUSTER}" "${GHOST}" $tmpdir --${EXPORT} --without-tags=private,Amylum --published -u http://johnlane.ie -v
 
 if [[ $? == 0 ]]
 then

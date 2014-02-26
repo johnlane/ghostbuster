@@ -1,6 +1,8 @@
 require 'sanitize' # gem install sanitize
 module Post
 
+    include Helpers
+
     def file_extension=(e)
       @extn = e
     end

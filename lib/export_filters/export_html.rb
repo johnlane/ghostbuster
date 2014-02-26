@@ -31,7 +31,7 @@ class ExportFilter_html < ExportFilter
   end
 
   def close
-    debug("Writing HTML index",true)
+    debug("Writing HTML index")
     @html_index << @html['index-bottom']
     write('index.html',@html_index)
   end
@@ -122,7 +122,7 @@ private
     # http://rubular.com/r/eTWYVU4Led
     post_html.gsub!(/{{#if ([a-z]+)}}(.*){{\/if}}/) do
       query = "SELECT count(*) FROM posts_#{$~.captures[0]} WHERE post_id = #{post.id}"
-      $~.captures[1] if db.execute(query).first[0] > 0
+      $~.captures[1] if environment.db.execute(query).first[0] > 0
     end
   
     # Substitute handlebars field value-list references (http://rubular.com/r/HfdwHY0Sdw)
@@ -137,7 +137,7 @@ private
     # Expand body_class
     query = "SELECT t.name FROM posts_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id
  = #{post.id}"
-    r = db.execute(query)
+    r = environment.db.execute(query)
     tagcss = r.map! {|r| 'tag-'+r['name'].downcase.gsub(' ','-')}.join(' ') # tag names as CSS class IDs
     post_html.gsub!(/{{body_class}}/,"post-template "+tagcss)
     post_html.gsub!(/{{post_class}}/,"post "+tagcss)
