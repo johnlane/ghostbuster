@@ -7,6 +7,14 @@ module Post
       @extn = e
     end
 
+    def environment=(e)
+      @environment = e
+    end
+
+    def e
+      @environment
+    end
+
     # Get key, return its value, applying optional modifiers
     # This just invokes a method with the key's name. If there is no such
     # method defined then 'method missing' performs the get_key task. 
@@ -16,7 +24,7 @@ module Post
 
     # Return the URL for the current post. Relative unless :absolute modifier given.
     def url(*args)
-      modifiers(args)[:absolute] == 'true' ? setting(:url)+'/'+filename : filename
+      modifiers(args)[:absolute] == 'true' ? e.setting(:url)+'/'+filename : filename
     end
 
     def filename
@@ -97,14 +105,14 @@ private
         # table not given, look up values in join table for has_many field (e.g. 'tags')
         # return multiple values as an array
         join = "posts_"+field     # lookup table - where the post id is dereferenced
-        query = "SELECT t.name FROM #{join} j JOIN #{field} t ON t.id = j.#{field.chop+'_id'} WHERE j.post_id = #{id}"
-        r = db.execute(query)
+        q = "SELECT t.name FROM #{join} j JOIN #{field} t ON t.id = j.#{field.chop+'_id'} WHERE j.post_id = #{id}"
+        r = e.query(q)
         r.map! {|r| r['name']} # just get names
       else
         # table given, look up field in given table using related id as join field
         join_table = JOIN_MAP[table] ? JOIN_MAP[table] : table
         join = "SELECT #{field} from #{join_table} WHERE id = '#{self[table+'_id']}'"
-        db.execute(join).first[field]
+        e.db.execute(join).first[field]
       end
     end
 

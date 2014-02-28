@@ -121,8 +121,8 @@ private
     # when expression looks for field f, this tests for presence of f or f_id
     # http://rubular.com/r/eTWYVU4Led
     post_html.gsub!(/{{#if ([a-z]+)}}(.*){{\/if}}/) do
-      query = "SELECT count(*) FROM posts_#{$~.captures[0]} WHERE post_id = #{post.id}"
-      $~.captures[1] if environment.db.execute(query).first[0] > 0
+      q = "SELECT count(*) FROM posts_#{$~.captures[0]} WHERE post_id = #{post.id}"
+      $~.captures[1] if environment.query(q).first[0] > 0
     end
   
     # Substitute handlebars field value-list references (http://rubular.com/r/HfdwHY0Sdw)
@@ -135,9 +135,9 @@ private
     end
 
     # Expand body_class
-    query = "SELECT t.name FROM posts_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id
+    q = "SELECT t.name FROM posts_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id
  = #{post.id}"
-    r = environment.db.execute(query)
+    r = environment.query(q)
     tagcss = r.map! {|r| 'tag-'+r['name'].downcase.gsub(' ','-')}.join(' ') # tag names as CSS class IDs
     post_html.gsub!(/{{body_class}}/,"post-template "+tagcss)
     post_html.gsub!(/{{post_class}}/,"post "+tagcss)

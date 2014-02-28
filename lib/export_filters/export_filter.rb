@@ -7,9 +7,9 @@ class ExportFilter
     @environment = e
   end
 
-  def setting(s)
-    @environment.setting(s)
-  end
+  def setting(s) environment.setting(s) end
+  def options(o) environment.option(o) end
+  def path(p) environment.path(p) end
 
   def close
   end
@@ -24,6 +24,7 @@ class ExportFilter
       include Post
     end
     p.file_extension = e
+    p.environment = @environment
   end
 
 protected
@@ -66,7 +67,6 @@ protected
       end
     end
   end
-
 
 private
 

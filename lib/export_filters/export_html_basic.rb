@@ -65,15 +65,15 @@ private
     @html_index << '<section class="post-excerpt"><p>'+post.excerpt+'&hellip;</p>' << NL
 
     # get index links from other output filters
-    if export_filters.count > 1
-      @html_index << '<p style="font-size:small">' << NL
-      export_filters.each do |f|
-        url = f.filename(post)
-        link = File.extname(url)
-        @html_index << '<a href="' + url + '">(' + link + ')</a>' << NL
-      end
-      @html_index << '</p>' << NL
-    end
+#    if export_filters.count > 1
+#      @html_index << '<p style="font-size:small">' << NL
+#      export_filters.each do |f|
+#        url = f.filename(post)   ### this does not work, so commented out block
+#        link = File.extname(url)
+#        @html_index << '<a href="' + url + '">(' + link + ')</a>' << NL
+#      end
+#      @html_index << '</p>' << NL
+#    end
   
     # end this index entry
     @html_index << '</section></article>' << NL

@@ -3,18 +3,3 @@
 # MIT License: see LICENSE file for details
 
 require_relative 'lib/environment'
-include Environment::Accessors
-include Helpers
-
-# Environment::debug_on
-
-posts do |post|
-
-  export_filters.each { |f| f.export_post(post) }
-
-end
-
-# allow output filters to finalise and close their files
-export_filters.each { |f| f.close }
-
-log("finished")

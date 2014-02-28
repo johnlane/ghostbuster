@@ -1,70 +1,48 @@
 require_relative('helpers')
 require 'optparse'
 require 'sqlite3'  # gem install sqlite3
+require 'yaml'
 class Environment
 
-  # Accessors
-  # External classes wishing to use the environment accessors can include this module
-  module Accessors
-    def option(o)
-      defined?(@options) ? @options[o.to_sym] 
-                 : defined?(@environment) ? @environment.option(o) : Environment.option(o)
-    end
+  # Default configuration applies to all environments unless customised
+  CONFIG = { name: 'default',
+             ghost_environment: 'production',
+             export_filters: 'html_basic',
+             source: '/srv/ghost',
+           }
 
-    def path(p)
-      defined?(@paths) ? @paths[p.to_sym]
-                 : defined?(@environment) ? @environment.path(p) : Environment.path(p)
-    end
-    def setting(p)
-      defined?(@settings) ? @settings[p.to_sym]
-                 : defined?(@environment) ? @environment.setting(p) : Environment.setting(p)
-    end
-    def export_filters
-      defined?(@export_filters) ? @export_filters
-                 : defined?(@environment) ? @environment.export_filters : Environment.export_filters
-    end
+  # An environment will abort unless it receives values for these items.
+  # They must either be defined above in CONFIG or otherwise supplied into
+  # an environment from the command-line or an environment file.
+  CONFIG_REQUIRED = %i(source destination ghost_environment export_filters)
 
-    def db
-    defined?(@db) ? @db : defined?(@environment) ? @environment.db  : Environment.db
-    end
-
-    def posts
-      log "Running posts query\n#{query(:posts)}"
-      db.execute(query(:posts)) { |p| yield p }
-    end
-
-    def query(p)
-      defined?(@queries) ? @queries[p] 
-                       : defined?(@environment) ? @environment.query(p) : Environment.query(p)
-    end
-  end # of module Accessors
-
+  # Instantiated environments get added to this array
+  @environments = []
+  
   class << self
 
     include Helpers
   
-    include Accessors
-  
+    attr_reader :environments
+
   protected
   
-    # Private accessors
-    def options
-      @options
-    end
-    def paths
-      @paths
-    end
-    def settings
-      @settings
-    end
-  
-    def load_environment
+    # Parses the options given on the command-line and, optionally, in a
+    # supplimentary configuration file
+    def load_environments
   
       return if defined?(@options) # only parse options once 
-  
+
       puts "parsing options..."
   
-      @options = {}
+      # Expect something
+      if ARGV.empty?
+        puts optparse
+        exit 1
+      end
+      
+      options = {}
+      environments = []
   
       optparse = OptionParser.new do |opts|
        opts.banner = 'GhostBuster: Export and publish Ghost blog as static pages.'
@@ -82,152 +60,242 @@ class Environment
         opts.on("-v", "--verbose", "Enable verbose message output") do |v|
           verbose_on
         end
+
+        opts.on("-1", "Limit posts query to one row (for testing)") do
+          options[:maximum_posts] = 1
+        end
       
-        @options[:env] = 'development'
+      
+        opts.on("-n", "--environment-name NAME", "Name this enviroment") do |n|
+         options[:name] = n
+        end
+
+        opts.on("-i", "--input-directory DIR", "Input directory (location of Ghost files)") do |d|
+         options[:source] = d
+        end
+
+        opts.on("-o", "--output-directory DIR", "Output directory") do |d|
+         options[:destination] = d
+        end
+
         opts.on("-e", "--environment ENV", "Environment to copy from") do |e|
-         @options[:env] = e
+         options[:ghost_enviromnent] = e
         end
       
         opts.on("--with-tags TAGS", "Include only posts with these tags (comma-separated)") do |d|
-          @options[:with_tags] = d
+         options[:with_tags] = d
         end
       
         opts.on("--without-tags TAGS", "Include only posts without these tags (comma-separated)") do
        |d|
-          @options[:without_tags] = d
+         options[:without_tags] = d
         end
       
         opts.on("-p", "--published", "Only published content") do |v|
-         @options[:published] = true
+          options[:published] = true
         end
       
         opts.on("-u", "--url URL", "Absolute URL to use in exported blog") do |u|
-         @options[:url] = u
+         options[:url] = u
+        end
+
+        opts.on("-f", "--export-filter FILTERS", "Export filters to use (comma-separated)") do |f|
+          options[:export_filters] = f
         end
       
-        @options[:formats] = []
-        opts.on("--html", "Extract html") do |f|
-         @options[:formats] << :html
-        end
-        opts.on("--html_basic", "Extract html (basic)") do |f|
-         @options[:formats] << :html_basic
-        end
-        opts.on("--markdown", "Extract Markdown") do |f|
-         @options[:formats] << :markdown
-        end
-        opts.on("--yaml", "Extract YAML") do |f|
-         @options[:formats] << :yaml
+        # Supplementary environments
+        opts.on("-f", "--environment-file FILE", "Load environments from file") do |f|
+          environments.concat(load_environment_file(f))
         end
       end
   
       optparse.parse!
-  
-      # default format options if not explicitly given as arguments
-      @options[:formats] = [:html, :markdown, :yaml] if @options[:formats].empty?
-  
+
       # Positional arguments
-      if ARGV.empty?
-        puts optparse
-        exit 1
+      if ARGV.count > 0
+        options[:source] = ARGV[0].dup unless options[:source]
+        options[:destination] = ARGV[1].dup if ARGV.count > 1 and options[:destination].nil?
       end
-  
-      @paths = {source: ARGV[0].dup}
-      if File.basename(@paths[:source]) == 'content'
-        @paths[:root] = File.dirname(@paths[:source])
-      else
-        @paths[:root] = @paths[:source]
-        @paths[:source] = @paths[:root] + '/content'
-      end
-      @paths[:destination] = ARGV.count >1 ? ARGV[1] : @paths[:source]
-      @paths[:config] = @paths[:root] + '/config.js'
-      @paths[:database] = @paths[:source] + '/data/ghost-dev.db'
-  
-      # Check paths are valid
-      @paths.each do |name,path|
-        do_or_die(File.exists?(path), "#{name} path '#{path}' is good",
-                                      "#{name} path #{path} not found")
-      end
-  
-      # Load configuration file
-      do_or_die(config = File.read(@paths[:config]),"read config ok","read config failed")
-      config.gsub!(/^\s*?\/\/.*?\n/m,'') # remove comments from config
-  
-      # Get database file
-      match_dbfile = config.match(/#{options[:env]}:\s*{.*?database:\s*{.*?connection:\s*{.*?filename:.*?([\w-]*?\.db)/m)
-      dbfile = match_dbfile.nil? ? abort("unable to find database file name for '#{options[:env]}' environment in configuration file") : match_dbfile[1]
-  
-       @paths[:database] = @paths[:source] + '/data/' + dbfile
-  
-      # Open database
-      dbfile = @paths[:database]
-      do_or_die(File.exists?(dbfile),'database found',"Cannot find database file #{dbfile}")
-      do_or_die(@db = SQLite3::Database.new(dbfile),'database opened',
-                                                    "Could not initialise database #{dbfile}")
-      @db.results_as_hash = true
-  
-      # Load settings from database
-      settings = %w[title description logo cover activeTheme]
-      query = "select key,value from settings where key in (#{settings.map{|s|"'#{s}'"}.join(',')})"
-      @settings = {}
-      do_or_die(@db.execute(query).each{|s| @settings.update s[0].to_sym => s[1]},
-            'read settings','unable to read settings')
-      @settings.each { |k,v| log "setting(#{k}) = #{v}" }
-  
-      # Set the URL that will be used as the root on exported blogs
-      if @options.include?(:url)
-        @settings[:url] = @options[:url]
-      else
-        # Get site URL from config file and put it into settings array
-        match_url = config.match(/#{options[:env]}:\s*{.*?url:\s*'(.*?)'/m)
-        url = match_url.nil? ? abort("unable to find url for #{options[:env]} environment") : match_url[1]
-        @settings[:url] = url
-      end
-  
-      # Build posts query
-      @queries = {}
-      @queries[:posts] = 'SELECT posts.*, users.name as author_name from posts' \
-                     << ' INNER JOIN users ON posts.author_id = users.id'
-  
-      whand = ' WHERE' # will change to 'AND' for subsequent clauses
-      unless option(:with_tags).nil?   
-        @queries[:posts] << whand << ' EXISTS (' \
-                         <<   'SELECT 1 FROM posts_tags' \
-                         <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
-                         <<   ' WHERE posts_tags.post_id = posts.id' \
-                         <<   ' AND tags.name IN (' \
-                         <<   option(:with_tags).split(',').map {|t| "'#{t}'" }.join(',') \
-                         <<   '))'             
-        whand = ' AND'
-      end
-  
-      unless option(:without_tags).nil?
-        @queries[:posts] << whand << ' NOT EXISTS (SELECT 1 FROM posts_tags' \
-                         <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
-                         <<   ' WHERE posts_tags.post_id = posts.id' \
-                         <<   ' AND tags.name IN (' \
-                         <<   option(:without_tags).split(',').map {|t| "'#{t}'" }.join(',') \
-                         <<   '))'                
-        whand = ' AND'
-      end
-  
-      @queries[:posts] << whand << " posts.status == 'published'" if option(:published) 
-      @queries[:posts] << ' ORDER BY posts.published_at DESC'
-  #    @queries[:posts] << " LIMIT 1" # Debugging limit
-  
-      # Load modules for output filters
-      @export_filters = []
-      @options[:formats].each do |f|
-        f = f.to_s
-        log "Loading #{f} output filter"
-        require_relative 'export_filters/export_'+f
-        @export_filters << Object.const_get('ExportFilter_'+f).new(self)
-      end
-  
+
+      # Default source directory if we still don't have one
+      options[:source] = CONFIG[:source] unless options[:source]
+
+      # Look for an environment file in the source directory if none already loaded
+      f = options[:source]+'/ghostbuster.yml'
+      environments.concat(load_environment_file(f)) if environments.empty? and File.exists?(f)
+
+      # Add environment defined by command-line
+      # an export filter must be given but all other attributes will default
+      environments << options if options.has_key?(:export_filter)
+
+      # Instantiate environments
+      environments.each { |e| @environments << Environment.new(e) }
+
+    end
+
+    # Loads environment definitions from YAML file and returns array
+    def load_environment_file(f)
+      do_or_die(File.exists?(f),"Loading environments from #{f}",
+                                "Environment file #{f} does not exist")
+          supp_envs = YAML.load_file(f)
+          supp_envs.each_with_object([]) do |(name,options),envs|
+
+            # store the environment name inside its configuration hash
+            options[:name] = name
+            
+            # translate alternative keywords for export filters
+            %w(filter filters export-filters).each do |f|
+              if options.include?(f)                           
+                options[:export_filters] = options[f].split(' ').join(',')
+                options.delete(f)                               
+              end                                       
+            end                                       
+
+            options = options.each_with_object({}){|(k,v),h| h[k.to_sym] = v} # symbolise keys
+            envs << options # add hash to environments array
+          end
     end
   
   end # of class << self
 
-  # Load the environment
-  self.load_environment
+  # Creates a new environment with the given configuration
+  def initialize(config)
+
+    @config = CONFIG.merge config # apply given configuration over defaults
+
+    # Sanity check the supplied config for required sane values
+    CONFIG_REQUIRED.each { |k| abort "A #{k} is required" unless @config.has_key? k }
+    @config.each { |k,v| abort("An empty #{k} cannot be used") if v.nil? or v.empty? }
+
+    log "Initialising environment '#{config(:name)}'"
+
+    # Uncomment the below line to prohibit source and destination being the same
+    abort("source and destination are the same") if config(:source)==config(:destination)
+
+    @paths = {source: @config[:source], destination: @config[:destination]}
+    if File.basename(@paths[:source]) == 'content'
+      paths[:root] = File.dirname(@paths[:source])
+    else
+      paths[:root] = path(:source)
+      paths[:source] = path(:root) + '/content'
+    end
+    paths[:config] = path(:root) + '/config.js'
+
+    # Check paths are valid
+    paths.each do |name,path|
+      do_or_die(File.exists?(path), "#{name} path '#{path}' is good",
+                                    "#{name} path #{path} not found")
+    end
+  
+    # Load Ghost configuration file
+    do_or_die(gconfig = File.read(path(:config)),"read config ok","read config failed")
+    gconfig.gsub!(/^\s*?\/\/.*?\n/m,'') # remove comments from config
+  
+    # Get database file
+    match_dbfile = gconfig.match(/#{config(:ghost_environment)}:\s*{.*?database:\s*{.*?connection:\s*{.*?filename:.*?([\w-]*?\.db)/m)
+    dbfile = match_dbfile.nil? ? abort("unable to find database file name for '#{config(:ghost_environment)}' environment in configuration file") : match_dbfile[1]
+    paths[:database] = path(:source) + '/data/' + dbfile
+  
+    # Open database
+    dbfile = path(:database)
+    do_or_die(File.exists?(dbfile),"database #{dbfile} found",
+                                   "Cannot find database file #{dbfile}")
+    do_or_die(self.db = SQLite3::Database.new(dbfile, readonly: true),'database opened',
+                                                    "Could not initialise database #{dbfile}")
+    db.results_as_hash = true
+  
+    # Load settings from database
+    @settings = {}
+    query = "select key,value from settings"
+    do_or_die(db.execute(query).each{|s| @settings.update s[0].to_sym => s[1]},
+          'read settings','unable to read settings')
+  
+    # Set the URL that will be used as the root on exported blogs
+    if config.include?(:url)
+      settings[:url] = config(:url)
+    else
+      # Get site URL from config file and put it into settings array
+      match_url = gconfig.match(/#{config(:ghost_environment)}:\s*{.*?url:\s*'(.*?)'/m)
+      url = match_url.nil? ? abort("unable to find url for #{config(:ghost_environment)} environment") : match_url[1]
+      settings[:url] = url
+    end
+  
+    # Build posts query
+    @queries = {}
+    queries[:posts] = 'SELECT posts.*, users.name as author_name from posts' \
+                   << ' INNER JOIN users ON posts.author_id = users.id'
+  
+    whand = ' WHERE' # will change to 'AND' for subsequent clauses
+    unless config(:with_tags).nil?   
+      queries[:posts] << whand << ' EXISTS (' \
+                      <<   'SELECT 1 FROM posts_tags' \
+                      <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
+                      <<   ' WHERE posts_tags.post_id = posts.id' \
+                      <<   ' AND tags.name IN (' \
+                      <<   config(:with_tags).split(',').map {|t| "'#{t}'" }.join(',') \
+                      <<   '))'             
+      whand = ' AND'
+    end
+  
+    unless config(:without_tags).nil?
+      queries[:posts] << whand << ' NOT EXISTS (SELECT 1 FROM posts_tags' \
+                      <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
+                      <<   ' WHERE posts_tags.post_id = posts.id' \
+                      <<   ' AND tags.name IN (' \
+                      <<   config(:without_tags).split(',').map {|t| "'#{t}'" }.join(',') \
+                      <<   '))'                
+      whand = ' AND'
+    end
+  
+    queries[:posts] << whand << " posts.status == 'published'" if config(:published) 
+    queries[:posts] << ' ORDER BY posts.published_at DESC'
+
+    # Debugging limit
+    queries[:posts] << " LIMIT #{config[:maximum_posts]}" if config[:maximum_posts]
+
+    # Load export filters
+    export_filters = []
+    config(:export_filters).split(',').each do |f|
+      f = f.to_s
+      log "Loading #{f} export filter"
+      begin
+        require_relative 'export_filters/export_'+f
+      rescue LoadError
+        abort("Failed to load export filter '#{f}'")
+      end
+      export_filters << Object.const_get('ExportFilter_'+f).new(self)
+    end
+
+    # Run all posts through each filter
+    db.execute(queries[:posts]) { |post| export_filters.each { |f| f.export_post(post) } }
+
+    # Close the database
+    db.close 
+  
+    # Close all filters
+    export_filters.each { |f| f.close }
+
+  end
+
+  # Public accessors
+  def path(p) @paths[p] end
+  def setting(s) @settings[s] end
+
+  def query(q)
+    db.execute(q)
+  end
+
+  
+
+  private
+
+  # Private accessors
+  def config(c) @config[c] end
+  attr_reader :paths, :settings, :queries # access array (contents can be written)
+  attr_accessor :db
+  include Helpers
+
+  # Load enviromnents defined by command-line options
+  self.load_environments
 
 end
