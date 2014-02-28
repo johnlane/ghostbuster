@@ -16,6 +16,13 @@ class Environment
   # an environment from the command-line or an environment file.
   CONFIG_REQUIRED = %i(source destination ghost_environment export_filters)
 
+  # The options that are required but don't get defaulted
+  CONFIG_MANDATORY = (CONFIG.keys & CONFIG_REQUIRED)
+
+  # Name of the default environment file that will be used if present
+  # and no other environment file is given on the command-line.
+  ENVIRONMENT_FILE = 'ghostbuster.yml'
+
   # Instantiated environments get added to this array
   @environments = []
   
@@ -23,7 +30,7 @@ class Environment
 
     include Helpers
   
-    attr_reader :environments
+#    attr_reader :environments
 
   protected
   
@@ -33,21 +40,15 @@ class Environment
   
       return if defined?(@options) # only parse options once 
 
-      puts "parsing options..."
+      log("parsing options...")
   
-      # Expect something
-      if ARGV.empty?
-        puts optparse
-        exit 1
-      end
-      
       options = {}
       environments = []
   
       optparse = OptionParser.new do |opts|
        opts.banner = 'GhostBuster: Export and publish Ghost blog as static pages.'
   
-        opts.on("--help", "show helpful documentation") do |v|
+        opts.on("--doc", "show helpful documentation") do |v|
           puts File.read("#{File.dirname(__FILE__)}/../doc/HELP")
           exit 0
         end
@@ -121,12 +122,25 @@ class Environment
       options[:source] = CONFIG[:source] unless options[:source]
 
       # Look for an environment file in the source directory if none already loaded
-      f = options[:source]+'/ghostbuster.yml'
+      f = options[:source]+'/'+ENVIRONMENT_FILE
       environments.concat(load_environment_file(f)) if environments.empty? and File.exists?(f)
 
       # Add environment defined by command-line
       # an export filter must be given but all other attributes will default
-      environments << options if options.has_key?(:export_filter)
+      environments << options if (options.keys & CONFIG_MANDATORY) == CONFIG_MANDATORY
+
+      # Output help if no environments
+      if environments.empty?
+        puts optparse
+        puts
+        puts "An environment requires these options:"
+        CONFIG_REQUIRED.each { |k| puts '--'+k.to_s }
+        puts "where these ones are mandatory:"
+        CONFIG_MANDATORY.each { |k| puts '--'+k.to_s }
+        puts "Some options get default valuess if omitted:"
+        CONFIG.each { |k,v| puts '--'+k.to_s+' = '+v }
+        exit 1
+      end
 
       # Instantiate environments
       environments.each { |e| @environments << Environment.new(e) }
@@ -284,8 +298,6 @@ class Environment
   def query(q)
     db.execute(q)
   end
-
-  
 
   private
 
