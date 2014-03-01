@@ -6,7 +6,6 @@ class ExportFilter_markdown < ExportFilter
 
   def initialize(e)
     super
-    puts "New GBOF for Markdown"
     load
   end
 

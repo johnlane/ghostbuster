@@ -10,8 +10,8 @@ class ExportFilter_html_basic < ExportFilter
   def initialize(e)
     super
     prepare_html
-    theme = setting(:activeTheme) ? setting(:activeTheme) : 'casper'
-    copy [ 'images', 'themes/'+theme+'/assets/css' ]
+    assets = 'themes/'+(setting(:activeTheme) ? setting(:activeTheme) : 'casper')+'//assets/'
+    copy [ 'images', assets+'css/', assets+'fonts/' ]
   end
 
   # Output a post
@@ -26,7 +26,7 @@ class ExportFilter_html_basic < ExportFilter
     content.gsub!('/content/','')
   
     # wrte html for the post page
-    html = @html_head + '\n'
+    html = @html_head + NL
     html << '<span class="post-meta"><time>' + post.date + '</span>'
     html << '<h1>'+post.title+'</h1>'
     html << '<section class="post-content">'+content+'</section>'
@@ -65,15 +65,15 @@ private
     @html_index << '<section class="post-excerpt"><p>'+post.excerpt+'&hellip;</p>' << NL
 
     # get index links from other output filters
-    if export_filters.count > 1
-      @html_index << '<p style="font-size:small">' << NL
-      export_filters.each do |f|
-        url = f.filename(post)
-        link = File.extname(url)
-        @html_index << '<a href="' + url + '">(' + link + ')</a>' << NL
-      end
-      @html_index << '</p>' << NL
-    end
+#    if export_filters.count > 1
+#      @html_index << '<p style="font-size:small">' << NL
+#      export_filters.each do |f|
+#        url = f.filename(post)   ### this does not work, so commented out block
+#        link = File.extname(url)
+#        @html_index << '<a href="' + url + '">(' + link + ')</a>' << NL
+#      end
+#      @html_index << '</p>' << NL
+#    end
   
     # end this index entry
     @html_index << '</section></article>' << NL
@@ -84,8 +84,8 @@ private
 
     meta = '<meta http-equiv="Content-Type" content="text/html" charset="UTF-8" />' + NL
     meta << '<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />' + NL
-    meta << '<link rel="stylesheet" type="text/css" href="' + setting(:activeTheme) + '/assets/css/screen.css"/>' unless setting(:activeTheme).nil?
-    meta << '<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic|Open+Sans:700,400" />'
+    meta << '<link rel="stylesheet" type="text/css" href="/assets/css/screen.css"/>' + NL
+    meta << '<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic|Open+Sans:700,400" />' + NL
     meta << '<meta name="generator" content="GhostBuster" />'
 
     @html_index='<html><head>' + NL + meta + NL + '</head>'
@@ -111,7 +111,7 @@ private
     @html_foot = '<footer class="site-footer"><div class="inner">'
     @html_foot << '<section class="copyright">All content copyright <a href="index.html">'
     @html_foot << setting(:title) << '</a> &copy; '+year+' &bull; All rights reserved.</section>'
-    @html_foot << '<section class="poweredby">Powered by <a href="https://github.com/johnlane/random-toolbox">GhostBuster</a> &copy;'+year+' John Lane</section>'
+    @html_foot << '<section class="poweredby">Powered by <a href="https://github.com/johnlane/ghostbuster">GhostBuster</a> &copy;'+year+' John Lane</section>'
     @html_foot << '</div></footer>'
     @html_foot << '</body></html>'
 

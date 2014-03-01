@@ -2,9 +2,14 @@ require 'fileutils'
 
 class ExportFilter
 
+  attr_reader :environment
   def initialize(e)
     @environment = e
   end
+
+  def setting(s) environment.setting(s) end
+  def options(o) environment.option(o) end
+  def path(p) environment.path(p) end
 
   def close
   end
@@ -19,6 +24,7 @@ class ExportFilter
       include Post
     end
     p.file_extension = e
+    p.environment = @environment
   end
 
 protected
@@ -37,23 +43,30 @@ protected
 
   end
 
-  # Copy directories unless source and destination are the same
+  # Copies directories from the environment's source path to its destination path
+  # Does not copy when the source and destination are the same
+  # Accepts a list of copydirs specified as an array or a comma-separated string
+  # Each copydir is a directory path to copy, relative to the environment source
+  # If copydir contains a '//' then the following sub-path is appended to the destination
+  # If copydir ends with a '/' then the contents of the directory are copied
   def copy(copydirs)
     unless path(:source) == path(:destination)
       copydirs = copydirs.split(',') if copydirs.is_a? String
       abort("Export filter can't copy #{p option(:copydirs)}") unless copydirs.is_a? Array
 
       copydirs.each do |src|
-        dest = src.dup
-        src.insert(0,path(:source)+'/')       # prepend source directory
-        dest.insert(0,path(:destination)+'/') # prepend destination directory
-        FileUtils.mkdir_p(dest)               # ensure dest intermediate dirs exist
+        dest_subdirs = src[/\/\/(.*)/,1] # regex returns any part of src after '//' separator
+        src.gsub!('//','/')              # collapse '//' separator in source path
+        dest = path(:destination).dup    # destination path           
+        dest << '/'+dest_subdirs if dest_subdirs # append any destination subdirectories
+        src.insert(0,path(:source)+'/')  # prepend source directory
+        src << '*' if src[-1,1] == '/'   # append '*' when copying directory contents
         log("copying '#{src}' to '#{dest}'")
-        FileUtils.cp_r(src,dest,preserve: true)
+        FileUtils.mkdir_p(dest)          # ensure dest intermediate dirs exist
+        FileUtils.cp_r(Dir[src],dest,preserve: true) # Dir globs '*' added above
       end
     end
   end
-
 
 private
 
