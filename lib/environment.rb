@@ -26,6 +26,8 @@ class Environment
   # Instantiated environments get added to this array
   @environments = []
   
+  @@limit_posts = false # if true the export is limited to one post ( -1 cmd-line)
+
   class << self
 
     include Helpers
@@ -64,6 +66,7 @@ class Environment
 
         opts.on("-1", "Limit posts query to one row (for testing)") do
           options[:maximum_posts] = 1
+          @@limit_posts = true
         end
       
       
@@ -265,7 +268,8 @@ class Environment
     queries[:posts] << ' ORDER BY posts.published_at DESC'
 
     # Debugging limit
-    queries[:posts] << " LIMIT #{config[:maximum_posts]}" if config[:maximum_posts]
+    #queries[:posts] << " LIMIT #{config[:maximum_posts]}" if config[:maximum_posts]
+    queries[:posts] << " LIMIT 1" if @@limit_posts
 
     # Load export filters
     export_filters = []
