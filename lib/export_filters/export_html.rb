@@ -30,10 +30,43 @@ class ExportFilter_html < ExportFilter
   
   end
 
+  # Close the output filter
+  # Writes a paginated index file
   def close
+
     debug("Writing HTML index")
-    @html_index << @html['index-bottom']
-    write('index.html',@html_index)
+    posts_per_page = setting(:postsPerPage).to_i
+    page = 0
+    pages = @html_index.count / posts_per_page + 1
+
+    begin
+
+      index = @html['index-top'].dup
+      posts = 0
+
+      while !@html_index.empty? and posts < posts_per_page do
+        index << @html_index.shift
+        posts+=1
+      end
+
+      index << @html['index-bottom']
+
+      # Pagination controls using HTML derived from Ghost default 
+      # note that any "pagination.hbs" partial in the theme is ignored
+      prev_file = page > 0 ? (page == 1 ? 'index.html' : "index#{page-1}.html") : nil
+      this_file = page == 0 ? "index.html" : "index#{page}.html"
+      next_file = @html_index.count + posts > posts_per_page ? "index#{page+1}.html" : nil
+      pagination = '<nav class="pagination" role="pagination">'
+      pagination << '<a class="newer-posts" href="'<<prev_file<<'">&larr;</a>' if prev_file
+      page+=1
+      pagination << '<span class="page-number">Page '<<page.to_s<<' of '<<pages.to_s<<'</span>'
+      pagination << '<a class="older-posts" href="'<<next_file<<'">&rarr;</a>' if next_file
+      index.gsub!(/{{pagination}}/,pagination)
+
+      write(this_file,index)
+
+    end until @html_index.empty?
+
   end
 
 private
@@ -94,7 +127,7 @@ private
     @html['index-post'], @html['index-bottom'] = splits[1].split(/{{\/foreach}}/)
 
     # Start the html index
-    @html_index = @html['index-top']
+    @html_index = []
 
   end
 
