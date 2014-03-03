@@ -82,8 +82,8 @@ class Environment
          options[:destination] = d
         end
 
-        opts.on("-e", "--environment ENV", "Environment to copy from") do |e|
-         options[:ghost_enviromnent] = e
+        opts.on("-e", "--ghost-environment ENV", "Environment to copy from") do |e|
+         options[:ghost_environment] = e
         end
       
         opts.on("--with-tags TAGS", "Include only posts with these tags (comma-separated)") do |d|
@@ -130,7 +130,12 @@ class Environment
 
       # Add environment defined by command-line
       # an export filter must be given but all other attributes will default
-      environments << options if (options.keys & CONFIG_MANDATORY) == CONFIG_MANDATORY
+      if (options.keys & CONFIG_MANDATORY) == CONFIG_MANDATORY
+        environments << options
+      else
+        log("Ignoring incomplete command-line environment:\n#{p options}")
+        log("Missing keys:\n#{CONFIG_MANDATORY - options.keys}")
+      end
 
       # Output help if no environments
       if environments.empty?
@@ -182,7 +187,8 @@ class Environment
 
     # Sanity check the supplied config for required sane values
     CONFIG_REQUIRED.each { |k| abort "A #{k} is required" unless @config.has_key? k }
-    @config.each { |k,v| abort("An empty #{k} cannot be used") if v.nil? or v.empty? }
+p @config
+    @config.each { |k,v| abort("An empty #{k} cannot be used") if v.nil? or (v.respond_to?(:empty) && v.empty?) }
 
     log "Initialising environment '#{config(:name)}'"
 
@@ -226,6 +232,7 @@ class Environment
     query = "select key,value from settings"
     do_or_die(db.execute(query).each{|s| @settings.update s[0].to_sym => s[1]},
           'read settings','unable to read settings')
+    settings.each { |k,v| log "setting(#{k}) = #{v}" }
   
     # Set the URL that will be used as the root on exported blogs
     if config.include?(:url)
@@ -311,7 +318,7 @@ class Environment
   attr_accessor :db
   include Helpers
 
-  # Load enviromnents defined by command-line options
+  # Load environments defined by command-line options
   self.load_environments
 
 end
