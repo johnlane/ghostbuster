@@ -133,7 +133,7 @@ class Environment
       if (options.keys & CONFIG_MANDATORY) == CONFIG_MANDATORY
         environments << options
       else
-        log("Ignoring incomplete command-line environment:\n#{p options}")
+        log("Ignoring incomplete command-line environment:\n#{options}")
         log("Missing keys:\n#{CONFIG_MANDATORY - options.keys}")
       end
 
@@ -187,7 +187,6 @@ class Environment
 
     # Sanity check the supplied config for required sane values
     CONFIG_REQUIRED.each { |k| abort "A #{k} is required" unless @config.has_key? k }
-p @config
     @config.each { |k,v| abort("An empty #{k} cannot be used") if v.nil? or (v.respond_to?(:empty) && v.empty?) }
 
     log "Initialising environment '#{config(:name)}'"
