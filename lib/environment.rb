@@ -114,12 +114,16 @@ class Environment
           options[:export_filters] = f
         end
       
+        opts.on("-b", "--publish URL", "Publish to URL") do |u|
+          options[:publish] = u
+        end
+      
         # Supplementary environments
         opts.on("-f", "--environment-file FILE", "Load environments from file") do |f|
           environments.concat(load_environment_file(f))
         end
       end
-  
+
       optparse.parse!
 
       # Positional arguments
@@ -170,12 +174,23 @@ class Environment
             # translate alternative keywords for export filters
             %w(filter filters export-filters).each do |f|
               if options.include?(f)                           
-                options[:export_filters] = options[f].split(' ').join(',')
+                options[:export_filters] = options[f].split(/[ ,]/)
                 options.delete(f)                               
               end                                       
             end                                       
 
             options = options.each_with_object({}){|(k,v),h| h[k.to_sym] = v} # symbolise keys
+
+            # convert arrays into comma-delimited strings
+            options = options.each_with_object({}) do |(k,v),h|
+               h[k] = v.is_a?(Array) ? v.join(',') : v
+            end
+
+            # convert space-delimited into comma-delimited strings
+            %i(publish with_tags without_tags).each do |f|
+              options[f] = options[f].split(/[ ,]/).join(',') if options.include?(f)
+            end
+
             envs << options # add hash to environments array
           end
     end
@@ -277,7 +292,7 @@ class Environment
                       <<   ' INNER JOIN tags ON tags.id = posts_tags.tag_id' \
                       <<   ' WHERE posts_tags.post_id = posts.id' \
                       <<   ' AND tags.name IN (' \
-                      <<   config(:without_tags).split(',').map {|t| "'#{t}'" }.join(',') \
+                      <<   config(:without_tags).split(/[ ,]/).map {|t| "'#{t}'" }.join(',') \
                       <<   '))'                
       whand = ' AND'
     end
@@ -305,6 +320,12 @@ class Environment
     # Run all posts through each filter
     db.execute(queries[:posts]) { |post| export_filters.each { |f| f.export_post(post) } }
 
+    # Run the publisher
+    if config(:publish)
+      require_relative 'publisher'
+      Publisher.new(self).publish
+    end
+
     # Close the database
     db.close 
   
@@ -316,6 +337,7 @@ class Environment
   # Public accessors
   def path(p) @paths[p] end
   def setting(s) @settings[s] end
+  def config(c) @config[c] end
 
   def query(q)
     db.execute(q)
@@ -324,7 +346,6 @@ class Environment
   private
 
   # Private accessors
-  def config(c) @config[c] end
   attr_reader :paths, :settings, :queries # access array (contents can be written)
   attr_accessor :db
   include Helpers
