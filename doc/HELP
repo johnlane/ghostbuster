@@ -1,54 +1,119 @@
-Ghostbuster : Extract blog content from Ghost database into files
+GhostBuster: the blog exorcist
+==============================
 
-This is a tool that extracts content from a Ghost (http://www.ghost.org)
-system into files. The primary use-case is to store post data into a
-version control system such as Git (http://www.git-scm.com).
+Read this document on-line at http://johnlane.ie/ghostbuster-the-blog-exorcist
 
-The extracted files may also be used to host a lightweight copy of the
-blog on a static web server. An index page is generated and this can
-be used as a landing page on such a static web server.
+GhostBuster is a tool that extracts content from a [Ghost](http://www.ghost.org) server and re-publishes it in various ways.
 
-Quick Start
------------
+Example uses include
+
+* to produce a lightweight copy of the blog that can be hosted by a static web server.
+* performing backups
+
+It uses a system of *export filters* to extract the data from the Ghost server into a collection of files in various formats and *publishers* that transmit the generated files to various destinations.
+
+The design allows for new export filters and publishers to be added easily.
+
+GhostBuster is written in Ruby version 2.0.0.
+
+### Quick Start
 
 Those that don't want to read the detail can try this:
 
-$ ghostbuster /path/to/content /path/to/repository
+    $ ghostbuster /path/to/content /path/to/export
 
 which will export the production database to HTML files.
 
-Detail
-------
+The gory details
+----------
 
-    ghostbuster [OPTIONS] SOURCE [DESTINATION]
+##### NAME
 
-    ghostbuster [ -f [ENVIRONMENT-FILE] [OPTIONS] SOURCE [DESTINATION]
+`ghostbuster` - export and republish *Ghost* blogs
 
-Ghostbuster extracts content from the "content" directory of a Ghost
-environment.
+##### SYNOPSIS
 
-Ghostbuster takes various options on the command-line that together
-define a run-time environmemt. Environments may also be defined in 
-an ENVIRONMENT_FILE in addition to or instead of using command-line
-options. Each environment tells Ghostbuster how to export and from
-where. By using an environment file, Ghostbuster may perform multiple
-disparate exports in a single execution.
+       ghostbuster [OPTIONS]
+       ghostbuster [OPTIONS] SOURCE [DESTINATION] [OPTIONS]
 
-Each environment comprises a number of options. To see a complete list
-of the available options, their default values and whether they are
-mandatory, please run:
+##### DESCRIPTION
+
+GhostBuster extracts content from the `content` directory of a Ghost
+environment. It takes various options on the command-line that together
+define a run-time environment. Options may be supplied before or after the positional parameters `SOURCE` and `DESTINATION`.
+
+Environments may also be defined in an *Environment File* in addition to or instead of using command-line options. This is described further below.
+
+Each environment tells GhostBuster how to export and from where. By using an environment file, GhostBuster may perform multiple disparate exports in a single execution, making it easy to set up a single *cron* task to regularly perform multiple exports.
+
+Each environment is defined by various `[OPTIONS]`, some of which are required and others are optional. Some of the required options get default values if not explicitly stated but others are mandatory. For a list of the available options, their default values and whether they are mandatory, please run:
 
     ghostbuster --help
 
+The command-line arguments define an environment that is separate and in
+addition to any environments defined in an environment file. If there are
+insifficient command-line arguments to define an environment then an environment is not defined from the command-line.
+
+GhostBuster exits without action if no environments are defined.
+
+##### OPTIONS
+
+`-h` `--help` displays a summary of the available command-line options and lists those that are required, defaulted or mandatory.
+
+`--doc` shows detailed documentation (this document).
+
+`--license` shows the License text. GhostBuster is released under the MIT LICENSE.
+
+`-v` `--verbose` enables verbose message output.
+
+`-n` `--environment-name NAME` specifies the environment name. This name is for identification purposes only; it is not used by GhostBuster. Defaults to `default`.
+
+`-s` `--source` `-i` `--input-directory` specifies the source (input) directory (the location of the Ghost files to be exported). This can be given with or without the `content` subdirectory. Defaults to `/srv/ghost`.
+
+`-d` `--destination` `-o` `--output-directory` specifies the destination (output) directory where the export will be written to. It must already exist. Mandatory.
+
+`-e` `--ghost-environment` is the name of an environment given in Ghost's `config.js` file. Defaults to `production`.
+
+`--with-tags` lists tags (comma-separated) that posts must have, othwise they will not be exported. Optional. 
+`--without-tags` lists tags (comma-separated) that posts must not have if they are to be exported. Optional.
+
+`-p` `--published` will export only published content.
+
+`-u` `--url` overrides the absolute URL of the blog that is written in the exported files.
+`--export-filter` lists the export filters to use (comma-separated). See the *EXPORT FILTERS* section below.
+`-f` `--environment-file` will load environments from the given file. See the *ENVIRONMENT FILE* section below.
+
+### Export Filters
+
+GhostBuster uses *export filters* to export the content into different formats. These export filters are available:
+
+  * `markdown` export post content to markdown text files.
+  * `yaml` export post metadata to YAML text files (excludes content).
+  * `html` exports post content as HTML.
+  * `html_basic` also exports content to HTML.
+ 
+The HTML filters produce a set of files that is a static representation of the Ghost blog. The files can be used to serve a static HTML-only snapshot of the Ghost blog on a static web server.
+
+The `html_basic` filter is loosely based on the default *Casper* theme and produces a usable rendition of the blog. It uses the blog metadata (title and blog image) from the active theme, if there is one, or Casper. It doesn't include *advanced* features such as pagination or an RSS feed. All exported posts are indexed by a one-page `index.html` file. All post content is replicated, including images.
+
+The `html` filter uses the theme source files for the active theme to produce, as close as possible, an exact replica of the blog as it rendered by the Ghost server. It includes a paginated set of index files, the first of which is called `index.html` and an RSS feed containing the 20 most recent posts at `/rss/index.xml`. All post content is replicated, including images.
+
+Because the `html` filter attempts to translate the theme's *handlebars* source files, it may not always work perfectly. It works on Casper and should be fine with close derivatives thereof. It *should* work on other themes but any that use features that Casper doesn't may cause problems. Specifically, only the `default.hbs`, `index.hbs` and `posts.hbs` are parsed. Any theme using partials will not work. 
+
+For occasions where the `html` filter falls short, the `html_basic` filter will work.
+
+The RSS feed produced by the `html` filter uses a basic template that is loosely similar to Ghost's own. Notable differences include the fact that the Ghost feed contains entire posts whereas GhostBuster includes only an excerpt.  
+
+### Publishers
 
 ### Environment File
 
-The Environment file contains one or more environment definitions. It can
-be supplied either using the --environment-file (or -f) command- line
-argument or as a file called 'ghostbuster.yml' in the SOURCE directory.
+An *Environment File* can be used insead of or in addition to defining the run-time environment using command-line options.
 
-The file format is [YAML](http://www.yaml.org) and each environment
-definition is formatted like this:
+The Environment file contains one or more environment definitions and is supplied either using the `--environment-file`, or `-f`, command-line
+argument or as a file called `ghostbuster.yml` in the `SOURCE` directory.
+
+The file format is [YAML](http://www.yaml.org) and each environment definition is formatted like this:
 
     name:
       option: single-value
@@ -56,97 +121,31 @@ definition is formatted like this:
         multiple
         values
 
-The name can be anything; it serves no purpose except to identify the
-environment. There can be multiple options and these are described in
-a later section. Some options require a single value whereas other can
-be given multiple values.
+The `name` can be anything; it serves no purpose except to identify the
+environment. There can be multiple options and these are described above but only the long-form option name can be used in an environment file (and only the first one if there are more) unless otherwise stated: some options
+have shorter aliases that can be used in an environment file but these cannot be used on the command-line. Short-form option names can only be used on the command-line. When using an option in an environment file, the leading double-hyphen is omitted and connecting dashes are replaced by underscores.
 
-### Options
+Some options require a single value whereas other can be given multiple values.
 
-Options can be given on the command-line or in an environment file. When
-used in an environment, the long-form name must be used. Some options
-have shorter aliases that can be used in an environment file but cannot
-be used on the command-line. Short-form option names can only be used on
-the command-line.
+An example `ghostbuster.yml` file is shown below:
 
-For a complete list of options please run
+    Public website:
+      ghost_environment: development
+      url: http://blog.example.com
+      destination: /tmp/export
+      filter: html
 
-    ghostbuster --help
-
-
-
-
-
-x
+    Backup:
+      ghost_environment: development
+      destination: /tmp/backup
+      filter:
+        markdown
+        yaml
 
 
+### Examples
 
+Export HTML from development, include published posts except those tagged as *private*:
 
-
- The SOURCE is the directory location of the Ghost
-installation whose contents should be extracted. The DESTINATION is
-the directory location to where the content should be extracted to.
-
-
-
-
-
-
-
-
-The following content is extracted :
-
-  1. Posts
-  2. Directories
-
-SOURCE is mandatory. If it does not end in '/content' then this will be
-added automatically, so "/path/to/ghost" and "/path/to/ghost/content"
-are equivalent. 
-
-DESTINATION is optional. If not given, the destination will be the same
-as SOURCE. Only posts will be extracted and they will be written to the
-SOURCE. 
-
-If SOURCE and DESTINATION are different then Ghostbuster will also copy
-the content directories specified by the --copydirs option, which should
-be given as a comma-separated list. If the --copydirs option is not used
-then a default value of "images,themes/active-theme" will be used where
-"active-theme" is the active theme defined by Ghost's settings page.
-
-Posts are written as separate files with names in the following format:
-
-  ID - TITLE.TYPE
-
-where ID is the post ID assigned by Ghost, TITLE is the post's title and
-TYPE is the file type: both html and markdown files will be written.
-
-In addition, an index.html file is written containing links to all posts.
-If the extracted files are placed on a web server, this can serve as a
-landing page. For example, point a local web browser directly at the
-extract destination (file://DESTINATION/index.html)
-
-Ghostbuster will, by default, extract all posts. To only extract posts
-that have been published, use the --published option.
-
-Posts will be extracted to html, markdown and yaml. To only extract to
-a subset of these, specify one or more of the --html, --markdown and
---yaml options.
-
-Operational requirements
-------------------------
-
-The sqlite3 and sanitize gems must be installed:
-
-  $ gem install sqlite3 sanitize
-
-Arch Linux package requirements:
-ruby     : runtime (ruby 2.0)
-devtools : may be required to install/build gems
-
-                   (c) John Lane 2013-11-14.
-                Licensed under the MIT License.
-
-                   Part of the Random Toolbox:
-             https://github.com/johnlane/random-toolbox
-
+    ghostbuster /srv/ghost /tmp/export --published --exclude-tags=private
 

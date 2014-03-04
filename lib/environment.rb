@@ -7,7 +7,7 @@ class Environment
   # Default configuration applies to all environments unless customised
   CONFIG = { name: 'default',
              ghost_environment: 'production',
-             export_filters: 'html_basic',
+             export_filters: 'html',
              source: '/srv/ghost',
            }
 
@@ -17,7 +17,7 @@ class Environment
   CONFIG_REQUIRED = %i(source destination ghost_environment export_filters)
 
   # The options that are required but don't get defaulted
-  CONFIG_MANDATORY = (CONFIG.keys & CONFIG_REQUIRED)
+  CONFIG_MANDATORY = (CONFIG_REQUIRED - CONFIG.keys)
 
   # Name of the default environment file that will be used if present
   # and no other environment file is given on the command-line.

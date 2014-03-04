@@ -48,17 +48,22 @@ module Post
     def date(*args)
 
        if args and modifiers(args)[:format]
-        if modifiers(args)[:format] == "rfc822"
-          return DateTime.strptime(published_at.to_s ,'%Q').rfc822
-        else
+         format = modifiers(args)[:format]
+         unless format == "rfc822"
           format = modifiers(args)[:format].gsub!(/([A-Z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
-        end
+         end
        else
          format = '%d %b %Y'
        end
 
        date = published_at.to_s
-       date =~ /\d{13}/ ? DateTime.strptime(date,'%Q').strftime(format) : '(draft)'
+       if  date =~ /\d{13}/
+         date = DateTime.strptime(date,'%Q')
+         format == 'rfc822' ? date.rfc822 : date.strftime(format)
+       else
+         '(draft)'
+       end
+   #    date =~ /\d{13}/ ? DateTime.strptime(date,'%Q').strftime(format) : '(draft)'
     end
 
     # returns an html-escaped and whitespace-condensed excerpt from the html
