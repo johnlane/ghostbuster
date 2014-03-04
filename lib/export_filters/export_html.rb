@@ -1,5 +1,8 @@
 require_relative 'export_filter'
 
+# Hard-coded number of items in the RSS feed
+RSS_MAX_ITEMS = 20
+
 class ExportFilter_html < ExportFilter
 
   include Helpers
@@ -25,6 +28,11 @@ class ExportFilter_html < ExportFilter
     post_handlebars(post,index_html)
     @html_index << index_html
 
+    # Add a RSS entry
+    rss_item = @html['rss_item'].dup
+    post_handlebars(post,rss_item)
+    @rss_items << rss_item
+
     # Write the post html file
     write(post.filename,post_html,post.update_timestamp)
   
@@ -34,38 +42,9 @@ class ExportFilter_html < ExportFilter
   # Writes a paginated index file
   def close
 
-    debug("Writing HTML index")
-    posts_per_page = setting(:postsPerPage).to_i
-    page = 0
-    pages = @html_index.count / posts_per_page + 1
+    write_index
 
-    begin
-
-      index = @html['index-top'].dup
-      posts = 0
-
-      while !@html_index.empty? and posts < posts_per_page do
-        index << @html_index.shift
-        posts+=1
-      end
-
-      index << @html['index-bottom']
-
-      # Pagination controls using HTML derived from Ghost default 
-      # note that any "pagination.hbs" partial in the theme is ignored
-      prev_file = page > 0 ? (page == 1 ? 'index.html' : "index#{page-1}.html") : nil
-      this_file = page == 0 ? "index.html" : "index#{page}.html"
-      next_file = @html_index.count + posts > posts_per_page ? "index#{page+1}.html" : nil
-      pagination = '<nav class="pagination" role="pagination">'
-      pagination << '<a class="newer-posts" href="'<<prev_file<<'">&larr;</a>' if prev_file
-      page+=1
-      pagination << '<span class="page-number">Page '<<page.to_s<<' of '<<pages.to_s<<'</span>'
-      pagination << '<a class="older-posts" href="'<<next_file<<'">&rarr;</a>' if next_file
-      index.gsub!(/{{pagination}}/,pagination)
-
-      write(this_file,index)
-
-    end until @html_index.empty?
+    write_rss
 
   end
 
@@ -116,6 +95,9 @@ private
       @html[f].gsub!(/^\s*$/m,'')      # strip empty lines
     end
 
+    # Change the URL for the RSS subscribe button
+    @html['default'].gsub!(/(\/rss\/)/,'\1index.xml')
+
     # Prepare the index html
     html_index = @html['default'].gsub(/{{body}}/,@html['index'])
     html_index.gsub!(/{{body_class}}/,"home-template")
@@ -129,6 +111,35 @@ private
     # Start the html index
     @html_index = []
 
+    # Prepare RSS
+    @html['rss_top'] = <<-eos
+      <?xml version="1.0" encoding="UTF-8" ?>
+      <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+        <atom:link href="#{setting(:url)}/rss/index.xml" rel="self" type="application/rss+xml" />
+        <title>#{setting(:title)}</title>
+        <description>#{setting(:description)}</description>
+        <link>#{setting(:url)}</link>
+        <lastBuildDate>#{DateTime.now.rfc822}</lastBuildDate>
+    eos
+
+    @html['rss_item'] = <<-eos
+        <item>
+          <title>{{title}}</title>
+          <description><![CDATA[{{excerpt}}]]></description>
+          <link>{{url absolute="true"}}</link>
+          <guid>{{url absolute="true"}}</guid>
+          <pubDate>{{date format="rfc822"}}</pubDate>
+        </item>
+    eos
+
+    @html['rss_bottom'] = <<-eos
+        </channel>
+      </rss>
+    eos
+
+    @rss_items = []
+    
   end
 
   def post_handlebars(post,post_html)
@@ -177,5 +188,63 @@ private
 
     # Remove leading '/content' from URL paths
     post_html.gsub!(/([\("'])\/content\//,'\1')
+  end
+
+  def write_index
+
+    debug("Writing HTML index")
+    posts_per_page = setting(:postsPerPage).to_i
+    page = 0
+    pages = @html_index.count / posts_per_page + 1
+
+    begin
+
+      index = @html['index-top'].dup
+      posts = 0
+
+      while !@html_index.empty? and posts < posts_per_page do
+        index << @html_index.shift
+        posts+=1
+      end
+
+      index << @html['index-bottom']
+
+      # Pagination controls using HTML derived from Ghost default 
+      # note that any "pagination.hbs" partial in the theme is ignored
+      prev_file = page > 0 ? (page == 1 ? 'index.html' : "index#{page-1}.html") : nil
+      this_file = page == 0 ? "index.html" : "index#{page}.html"
+      next_file = @html_index.count + posts > posts_per_page ? "index#{page+1}.html" : nil
+      pagination = '<nav class="pagination" role="pagination">'
+      pagination << '<a class="newer-posts" href="'<<prev_file<<'">&larr;</a>' if prev_file
+      page+=1
+      pagination << '<span class="page-number">Page '<<page.to_s<<' of '<<pages.to_s<<'</span>'
+      pagination << '<a class="older-posts" href="'<<next_file<<'">&rarr;</a>' if next_file
+      index.gsub!(/{{pagination}}/,pagination)
+
+      write(this_file,index)
+
+    end until @html_index.empty?
+
+  end
+
+  def write_rss
+
+    debug("Writing RSS feed")
+
+    rss = @html['rss_top'].dup
+    rss_items = 0
+
+    while !@rss_items.empty? and rss_items < RSS_MAX_ITEMS do
+      rss << @rss_items.shift
+      rss_items+=1
+    end
+
+    rss << @html['rss_bottom']
+
+    rss.gsub!(/^ {6}/,'') # remove leading six spaces from each line
+
+    FileUtils.mkdir_p(path(:destination)+'/rss')
+    write('rss/index.xml',rss)
+
   end
 end
