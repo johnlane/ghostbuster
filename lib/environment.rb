@@ -50,17 +50,24 @@ class Environment
       optparse = OptionParser.new do |opts|
        opts.banner = 'GhostBuster: Export and publish Ghost blog as static pages.'
   
-        opts.on("--doc", "show helpful documentation") do |v|
+        opts.on('-h', "--help", "show this help information") do |v|
+          puts optparse
+          puts
+          puts option_summary
+          exit 0
+        end
+      
+        opts.on("--doc", "show detailed documentation") do
           puts File.read("#{File.dirname(__FILE__)}/../doc/HELP")
           exit 0
         end
       
-        opts.on("--license", "show the MIT License") do |v|
+        opts.on("--license", "show the MIT License") do
           puts File.read("#{File.dirname(__FILE__)}/../LICENSE")
           exit 0
         end
       
-        opts.on("-v", "--verbose", "Enable verbose message output") do |v|
+        opts.on("-v", "--verbose", "Enable verbose message output") do
           verbose_on
         end
 
@@ -74,11 +81,11 @@ class Environment
          options[:name] = n
         end
 
-        opts.on("-i", "--input-directory DIR", "Input directory (location of Ghost files)") do |d|
+        opts.on("-s", "--source", "-i", "--input-directory DIR", "Input directory (location of Ghost files)") do |d|
          options[:source] = d
         end
 
-        opts.on("-o", "--output-directory DIR", "Output directory") do |d|
+        opts.on('-d', '--destination', '-o', '--output-directory DIR', 'Output directory') do |d|
          options[:destination] = d
         end
 
@@ -141,12 +148,7 @@ class Environment
       if environments.empty?
         puts optparse
         puts
-        puts "An environment requires these options:"
-        CONFIG_REQUIRED.each { |k| puts '--'+k.to_s }
-        puts "where these ones are mandatory:"
-        CONFIG_MANDATORY.each { |k| puts '--'+k.to_s }
-        puts "Some options get default valuess if omitted:"
-        CONFIG.each { |k,v| puts '--'+k.to_s+' = '+v }
+        puts option_summary
         exit 1
       end
 
@@ -178,6 +180,16 @@ class Environment
           end
     end
   
+    def option_summary
+     summary = "An environment requires these options:" + NL
+     CONFIG_REQUIRED.each { |k| summary << '--'+k.to_s+NL }
+     summary << "where these ones are mandatory:" + NL
+     CONFIG_MANDATORY.each { |k| summary << '--'+k.to_s+NL }
+     summary << "Some options get default valuess if omitted:" + NL
+     CONFIG.each { |k,v| summary << '--'+k.to_s+' = '+v+NL }
+     summary
+  end
+
   end # of class << self
 
   # Creates a new environment with the given configuration
