@@ -1,12 +1,17 @@
 Ghostbuster : Extract blog content from Ghost database into files
 
 This is a tool that extracts content from a Ghost (http://www.ghost.org)
-system into files. The primary use-case is to store post data into a
-version control system such as Git (http://www.git-scm.com).
+server into files.
 
-The extracted files may also be used to host a lightweight copy of the
-blog on a static web server. An index page is generated and this can
-be used as a landing page on such a static web server.
+The extracted content can be used, for example, to generate a backup or a 
+lightweight copy of the blog that can be hosted by a static web server.
+
+It uses a system of *export filters* to extract the data from the Ghost
+server into a series of files and *publishers* that transmit the generated
+files to various destinations.
+
+The primary use-case is to store post data into a
+version control system such as Git (http://www.git-scm.com).
 
 Quick Start
 -----------
@@ -25,13 +30,11 @@ Detail
     ghostbuster [ -f [ENVIRONMENT-FILE] [OPTIONS] SOURCE [DESTINATION]
 
 Ghostbuster extracts content from the "content" directory of a Ghost
-environment.
-
-Ghostbuster takes various options on the command-line that together
-define a run-time environmemt. Environments may also be defined in 
-an ENVIRONMENT_FILE in addition to or instead of using command-line
-options. Each environment tells Ghostbuster how to export and from
-where. By using an environment file, Ghostbuster may perform multiple
+environment. It takes various options on the command-line that together
+define a run-time environment. Environments may also be defined in a file,
+called an ENVIRONMENT_FILE, in addition to or instead of using command-line
+options. Each environment tells Ghostbuster how to export and from where.
+By using an environment file, Ghostbuster may perform multiple
 disparate exports in a single execution.
 
 Each environment comprises a number of options. To see a complete list
@@ -40,11 +43,19 @@ mandatory, please run:
 
     ghostbuster --help
 
+The command-line arguments define an environment that is separate and in
+addition to any environments defined in an environment file. If there are
+insifficient command-line arguments to define an environment (see the 
+section on MANDATORY OPTIONS) then an environment is not defined from the
+command-line.
+
+GhostBuster exits without action if no environments are defined.
+
 
 ### Environment File
 
 The Environment file contains one or more environment definitions. It can
-be supplied either using the --environment-file (or -f) command- line
+be supplied either using the --environment-file (or -f) command-line
 argument or as a file called 'ghostbuster.yml' in the SOURCE directory.
 
 The file format is [YAML](http://www.yaml.org) and each environment
@@ -60,6 +71,9 @@ The name can be anything; it serves no purpose except to identify the
 environment. There can be multiple options and these are described in
 a later section. Some options require a single value whereas other can
 be given multiple values.
+
+The environments defined in an environment file are in addition to the
+environment defined by the command-line options.
 
 ### Options
 
