@@ -1,6 +1,8 @@
 module Helpers
   extend self
 
+  NL = "\n"
+
   @@debug = @@verbose = false
 
   def included(c)
