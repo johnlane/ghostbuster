@@ -7,7 +7,7 @@ class Environment
   # Default configuration applies to all environments unless customised
   CONFIG = { name: 'default',
              ghost_environment: 'production',
-             export_filters: 'html_basic',
+             export_filters: 'html',
              source: '/srv/ghost',
            }
 
