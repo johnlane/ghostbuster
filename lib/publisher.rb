@@ -27,4 +27,8 @@ private
   def config(s) environment.config(s) end
   def path(p) environment.path(p) end
 
+  def method_missing(m,*args)
+    abort("Cannot publish #{m}")
+  end
+
 end

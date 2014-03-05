@@ -1,3 +1,6 @@
+require 'net/ftp'
+require 'tempfile'
+
 class Publisher
 
 private
@@ -22,9 +25,6 @@ private
       password = rc.password
 
     end
-
-    require 'net/ftp'
-    require 'tempfile'
 
     log "Creating archive for FTP upload"
     archive = Tempfile.new("ghostbuster-publish-")
