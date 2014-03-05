@@ -2,6 +2,7 @@ require_relative('helpers')
 require 'optparse'
 require 'sqlite3'  # gem install sqlite3
 require 'yaml'
+require 'tmpdir'
 class Environment
 
   # Default configuration applies to all environments unless customised
@@ -114,10 +115,6 @@ class Environment
           options[:export_filters] = f
         end
       
-        opts.on("-b", "--publish URL", "Publish to URL") do |u|
-          options[:publish] = u
-        end
-      
         # Supplementary environments
         opts.on("-f", "--environment-file FILE", "Load environments from file") do |f|
           environments.concat(load_environment_file(f))
@@ -187,7 +184,7 @@ class Environment
             end
 
             # convert space-delimited into comma-delimited strings
-            %i(publish with_tags without_tags).each do |f|
+            %i(destination with_tags without_tags).each do |f|
               options[f] = options[f].split(/[ ,]/).join(',') if options.include?(f)
             end
 
@@ -221,7 +218,7 @@ class Environment
     # Uncomment the below line to prohibit source and destination being the same
     abort("source and destination are the same") if config(:source)==config(:destination)
 
-    @paths = {source: @config[:source], destination: @config[:destination]}
+    @paths = {source: @config[:source], destination: Dir.mktmpdir}
     if File.basename(@paths[:source]) == 'content'
       paths[:root] = File.dirname(@paths[:source])
     else
@@ -235,7 +232,7 @@ class Environment
       do_or_die(File.exists?(path), "#{name} path '#{path}' is good",
                                     "#{name} path #{path} not found")
     end
-  
+
     # Load Ghost configuration file
     do_or_die(gconfig = File.read(path(:config)),"read config ok","read config failed")
     gconfig.gsub!(/^\s*?\/\/.*?\n/m,'') # remove comments from config
@@ -320,17 +317,20 @@ class Environment
     # Run all posts through each filter
     db.execute(queries[:posts]) { |post| export_filters.each { |f| f.export_post(post) } }
 
-    # Run the publisher
-    if config(:publish)
+    # Close the database
+    db.close 
+  
+    # Close all export filters
+    export_filters.each { |f| f.close }
+
+    # Run the publishers
+    if config(:destination)
       require_relative 'publisher'
       Publisher.new(self).publish
     end
 
-    # Close the database
-    db.close 
-  
-    # Close all filters
-    export_filters.each { |f| f.close }
+    # Remove temporary export directory
+    FileUtils.rmtree(path(:destination), secure: true)
 
   end
 

@@ -10,14 +10,14 @@ class Publisher
 
   def publish
 
-    config(:publish).split(',').each do |p|
+    config(:destination).split(',').each do |p|
       uri = URI(p)
       begin
         require_relative "publishers/publish_#{uri.scheme}"
       rescue LoadError
         abort("Failed to load #{uri.scheme} publisher")
       end
-      send(uri.scheme,config(:destination),uri)
+      send(uri.scheme,path(:destination),uri)
     end
   end
 
@@ -25,5 +25,6 @@ private
 
   attr_reader :environment
   def config(s) environment.config(s) end
+  def path(p) environment.path(p) end
 
 end
