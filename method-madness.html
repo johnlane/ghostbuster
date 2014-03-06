@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+    <title>Twisty Little Passages</title>
+    <meta name="description" content="Writings of John Lane" />
+
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="MobileOptimized" content="320" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" type="text/css" href="tube/assets/css/screen.css" />
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic|Open+Sans:700,400" />
+
+</head>
+<body class="post-template tag-ruby">
+
+    
+<main class="content" role="main">
+
+    <article class="post tag-ruby">
+
+        <header class="post-header">
+            <a id="blog-logo" href="http://johnlane.ie">
+                <img src="images/2014/Jan/my_computer.png" alt="Blog Logo" />
+
+            </a>
+        </header>
+
+        
+
+        <span class="post-meta"><time datetime="2014-02-13">13 Feb 2014</time> on Ruby</span>
+
+        <h1 class="post-title">Method Madness</h1>
+
+        <section class="post-content">
+            <p>Playing around with Ruby today, it dawned on me that if <em>everything is an object</em>, then a method is an object.</p>
+
+<pre><code>def foo                                    
+  puts "foo"
+end
+
+m = method(:foo)
+
+puts m.class                    # -&gt; Method
+puts m.class.superclass         # -&gt; Object
+</code></pre>
+
+<p>So, a method is an object: it's an instance of class <code>Method</code> and a subclass of class <code>Object</code>.</p>
+
+<p>Then I asked myself, if an object can have a singleton class, can a method?</p>
+
+<p>Well, it can. Look at this:</p>
+
+<pre><code>class &lt;&lt; m
+  def bar 
+    puts "bar"
+  end 
+end
+
+
+puts m.methods.include?(:bar)   # -&gt; true
+m.method(:bar).call             # -&gt; bar    
+</code></pre>
+
+<p>That's very funky. Although, I am not sure if it has any practical use.</p>
+        </section>
+
+        <footer class="post-footer">
+
+            <h4><a class="author" href="/">go home</a></h4>
+
+            <section class="share">
+                <h4>Share this post</h4>
+                <a class="icon-twitter" href="http://twitter.com/share?text=Method Madness&url=http://johnlane.ie/method-madness.html"
+                    onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                    <span class="hidden">Twitter</span>
+                </a>
+                <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=http://johnlane.ie/method-madness.html"
+                    onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                    <span class="hidden">Facebook</span>
+                </a>
+                <a class="icon-google-plus" href="https://plus.google.com/share?url=http://johnlane.ie/method-madness.html"
+                   onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+                    <span class="hidden">Google+</span>
+                </a>
+            </section>
+
+            <section style="margin:8rem 0 0 0">
+              <script src="https://apis.google.com/js/plusone.js"></script>
+              <g:comments
+                  href="http://johnlane.ie/method-madness.html"
+                  width="700"
+                  first_party_property="BLOGGER"
+                  view_type="FILTERED_POSTMOD">
+              </g:comments>
+            </section>
+
+        </footer>
+
+        
+
+    </article>
+
+</main>
+
+
+    <footer class="site-footer">
+        <a class="subscribe icon-feed" href="http://johnlane.ie/rss/index.xml"><span class="tooltip">Subscribe!</span></a>
+        <div class="inner">
+             <section class="copyright">All content copyright <a href="/">Twisty Little Passages</a> &copy; 2013 &bull; All rights reserved.</section>
+
+        </div>
+    </footer>
+
+    <script type="text/javascript" src="tube/assets/js/index.js"></script>
+
+</body>
+</html>
