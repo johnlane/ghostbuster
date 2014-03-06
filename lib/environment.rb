@@ -325,7 +325,7 @@ class Environment
 
     # Run the publishers
     if config(:destination)
-      require_relative 'publisher'
+      require_relative 'publishers/publisher'
       Publisher.new(self).publish
     end
 

@@ -13,9 +13,9 @@ class Publisher
     config(:destination).split(',').each do |p|
       uri = URI(p)
       begin
-        require_relative "publishers/publish_#{uri.scheme}"
-      rescue LoadError
-        abort("Failed to load #{uri.scheme} publisher")
+        require_relative "publish_#{uri.scheme}"
+      rescue LoadError => e
+        abort("Failed to load #{uri.scheme} publisher: #{e}")
       end
       send(uri.scheme,path(:destination),uri)
     end
