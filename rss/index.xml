@@ -5,7 +5,7 @@
   <title>Twisty Little Passages</title>
   <description>Writings of John Lane</description>
   <link>http://johnlane.github.io</link>
-  <lastBuildDate>Thu, 6 Mar 2014 19:30:53 +0000</lastBuildDate>
+  <lastBuildDate>Thu, 6 Mar 2014 19:32:15 +0000</lastBuildDate>
   <item>
     <title>Method Madness</title>
     <description><![CDATA[ Playing around with Ruby today, it dawned on me that if everything is an object, then a method is an object. def foo puts "foo" end m = method(:foo) puts m.class # -&gt; Method puts m.class.superclass # -&gt; Object So, a method is an object: it's an]]></description>
