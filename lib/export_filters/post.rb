@@ -77,7 +77,7 @@ module Post
 
     # returns an array containing the posts tags
     def tags(*args)
-      join('tags')
+      join('tags') - e.config(:hide_tags)
     end
 
     # Handle a request for a key value that is not handled by an explicit method

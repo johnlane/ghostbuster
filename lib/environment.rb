@@ -103,6 +103,11 @@ class Environment
          options[:without_tags] = d
         end
       
+        opts.on("--hide-tags TAGS", "Hide these tags from posts (comma-separated)") do
+       |t|
+         options[:hide_tags] = t
+        end
+      
         opts.on("-p", "--published", "Only published content") do |v|
           options[:published] = true
         end
@@ -232,6 +237,9 @@ class Environment
       do_or_die(File.exists?(path), "#{name} path '#{path}' is good",
                                     "#{name} path #{path} not found")
     end
+
+    # hold hidden tags as array
+    @config[:hide_tags] = config(:hide_tags) ? config(:hide_tags).split(',') : []
 
     # Load Ghost configuration file
     do_or_die(gconfig = File.read(path(:config)),"read config ok","read config failed")
