@@ -15,7 +15,7 @@ private
     end
 
     rsync_args = params[:args] ? params[:args] : '-a'
-    dest = "#{uri.host}::#{uri.path.sub(/^\//,'')}"
+    dest = "#{uri.host}::#{uri.path.sub(/^\//,'')}" # destination without leading /
 
     log "Copying..."
     Rsync.run(src+'/.',dest, rsync_args.split) { |r| abort(r.error) unless r.success? }
