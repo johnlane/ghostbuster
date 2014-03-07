@@ -9,6 +9,7 @@ module Post
     fm << "title: \"#{title}\""+NL
     fm << "date: #{date format: 'YYYY-MM-DD HH:mm:ss'}"+NL
     fm << "categories: #{tags.join(' ')}"+NL
+    fm << "permalink: #{slug}.html"+NL
     fm << "---"+NL
   end
 end
