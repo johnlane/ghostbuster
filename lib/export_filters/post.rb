@@ -126,18 +126,26 @@ private
       end
     end
 
-    # returns a hash of modifiers from a string
+    # Some fields support modifiers.
+    # Accepts a hash or a string or an array containing such hashes and/or strings
+    # If given a string, convert it into a hash
+    # If given an array, acts on each element and returns a single hash of all modifiers
+    # if given a hash, returns it unmodified
     def modifiers(s)
-      # Some fields support modifiers. They can be supplied as a hash or a string
-      # If supplied as a string, expand them into a hash
-      modifiers = s.nil? ? Hash.new : s
-      modifiers = modifiers.join(' ') if modifiers.is_a? Array
-      if modifiers.is_a?(String)
-        mods = {} # (http://rubular.com/r/LpvX7hBlmw)
-        modifiers.match(/([a-z]*)=["'](.*?)["']/) { |m| mods[m[1].to_sym] = m[2] }
-        modifiers = mods
+      if s.is_a? Array
+       s.each_with_object({}) { |m,h| h.merge! modifiers(m) }
+      else
+        modifiers = s.nil? ? Hash.new : s        # initialise as supplied or empty
+        modifiers = modifiers.join(' ') if modifiers.is_a? Array # Array to string
+
+        # Convert string to hash
+        if modifiers.is_a?(String)
+          mods = {} # (http://rubular.com/r/LpvX7hBlmw)
+          modifiers.match(/([a-z]*)=["'](.*?)["']/) { |m| mods[m[1].to_sym] = m[2] }
+          modifiers = mods
+        end
+        return modifiers
       end
-      return modifiers
     end
 
 end
