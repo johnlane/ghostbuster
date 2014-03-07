@@ -42,7 +42,11 @@ module Post
 
     # Map generic date format specifiers to ruby Date.strftime format specifiers
     # Ghost uses the Moment.js date formatting library (http://momentjs.com)
-    DATEFORMAT = {'YYYY'=>'%Y','MM'=>'%m', 'MMM'=>'%b','DD'=>'%d'}
+    # Convert format strings defined here: http://momentjs.com/docs/#/displaying/format/
+    # into those defined here:
+    #  http://ruby-doc.org/stdlib-2.1.0/libdoc/date/rdoc/DateTime.html#method-i-strftime
+    DATEFORMAT = {'YYYY'=>'%Y','MM'=>'%m', 'MMM'=>'%b','DD'=>'%d',
+                  'HH'=>'%H', 'mm'=>'%M', 'ss'=>'%S'}
 
     # Returns the published date (or 'draft'). Supports a :format modifier
     def date(*args)
@@ -50,7 +54,8 @@ module Post
        if args and modifiers(args)[:format]
          format = modifiers(args)[:format]
          unless format == "rfc822"
-          format = modifiers(args)[:format].gsub!(/([A-Z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
+          format = modifiers(args)[:format].gsub!(/([A-Za-z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
+puts "format: #{format}"
          end
        else
          format = '%d %b %Y'
