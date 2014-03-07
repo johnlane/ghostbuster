@@ -75,6 +75,11 @@ module Post
       Sanitize.clean(html).gsub(/\s+/, ' ')[0..250]
     end
 
+    # returns an array containing the posts tags
+    def tags(*args)
+      join('tags')
+    end
+
     # Handle a request for a key value that is not handled by an explicit method
     def method_missing(m, *args)
       debug("Requesting '#{m}'; args='#{args}")

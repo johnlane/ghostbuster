@@ -178,11 +178,8 @@ private
       post.get_key(df,mods)
     end
 
-    # Expand body_class
-    q = "SELECT t.name FROM posts_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id
- = #{post.id}"
-    r = environment.query(q)
-    tagcss = r.map! {|r| 'tag-'+r['name'].downcase.gsub(' ','-')}.join(' ') # tag names as CSS class IDs
+    # Expand body_class - use tag names as CSS class IDs
+    tagcss = post.tags.map! {|t| 'tag-'+t.downcase.gsub(' ','-')}.join(' ')
     post_html.gsub!(/{{body_class}}/,"post-template "+tagcss)
     post_html.gsub!(/{{post_class}}/,"post "+tagcss)
 
