@@ -1,5 +1,5 @@
-require 'rsync' # gem install rsync
 require 'cgi'
+require_relative 'publish_rsync'
 
 class Publisher
 
@@ -34,8 +34,8 @@ private
       abort("#{uri.path} has uncommitted changes")
     end
 
-    log "Copying..."
-    Rsync.run(src+'/.',uri.path, %w(-a --delete --exclude='.git')) { |r| abort(r.error) unless r.success? }
+    uri.scheme='rsync'
+    rsync(src,uri)
 
     if system("cd #{uri.path}; git diff-index --quiet HEAD --")
       log "No changes were made to the repository"
