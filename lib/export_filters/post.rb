@@ -55,7 +55,6 @@ module Post
          format = modifiers(args)[:format]
          unless format == "rfc822"
           format = modifiers(args)[:format].gsub!(/([A-Za-z]+)([ -]?)/) { |m| DATEFORMAT[$~[1]]+$~[2] }
-puts "format: #{format}"
          end
        else
          format = '%d %b %Y'
