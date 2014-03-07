@@ -1,4 +1,5 @@
 require_relative 'export_filter'
+require 'fileutils'
 
 # Add supporting methods to the Post extension
 module Post
@@ -20,6 +21,7 @@ class ExportFilter_jekyll < ExportFilter
     super
     assets = 'themes/'+(setting(:activeTheme) ? setting(:activeTheme) : 'casper')+'//assets/'
     copy [ 'images', assets+'css/', assets+'fonts/' ]
+    FileUtils.mkdir_p(path(:destination)+'/_posts')
   end
 
   # Output a post
@@ -31,7 +33,7 @@ class ExportFilter_jekyll < ExportFilter
     content = post.front_matter + post.markdown
   
     # write the post
-    write("#{post.date format: 'YYYY-MM-DD'}-#{post.filename}",content,post.update_timestamp)
+    write("_posts/#{post.date format: 'YYYY-MM-DD'}-#{post.filename}",content,post.update_timestamp)
 
   end
 
