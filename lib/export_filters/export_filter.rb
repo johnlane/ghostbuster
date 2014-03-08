@@ -11,9 +11,6 @@ class ExportFilter
   def options(o) environment.option(o) end
   def path(p) environment.path(p) end
 
-  def close
-  end
-
   # Extends the functionality of a post hash with methods to access
   # the post's content. Also requires the fle extension to be supplied;
   # this initialises the post's filename generation methods.
@@ -26,6 +23,10 @@ class ExportFilter
     p.file_extension = e
     p.environment = @environment
   end
+
+  # Public method stubs that are implemented by export filters
+  def export_post(post) end
+  def close() end
 
 protected
 
