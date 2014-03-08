@@ -1,4 +1,3 @@
-require 'cgi'
 require_relative 'publish_rsync'
 
 class Publisher
@@ -13,7 +12,7 @@ private
   def git(src,uri)
     log "Publishing #{src} to #{uri}..."
 
-    params = CGI.parse(uri.query).each_with_object({}){|(k,v),h| h[k.to_sym] = v} # symbolise
+    params = params(uri)
 
     unless File.directory?(uri.path) 
       if params[:remote][0]
