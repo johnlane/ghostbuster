@@ -80,6 +80,10 @@ module Post
       join('tags') - e.config(:hide_tags)
     end
 
+    # returns true if this is a page/post
+    def page?() page != 0 end
+    def post?() page == 0 end
+
     # Handle a request for a key value that is not handled by an explicit method
     def method_missing(m, *args)
       debug("Requesting '#{m}'; args='#{args}")
