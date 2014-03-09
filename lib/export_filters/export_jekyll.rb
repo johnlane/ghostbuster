@@ -20,8 +20,7 @@ class ExportFilter_jekyll < ExportFilter
 
   def initialize(e)
     super
-    assets = 'themes/'+(setting(:activeTheme) ? setting(:activeTheme) : 'casper')+'//assets/'
-    copy [ 'images', assets+'css/', assets+'fonts/' ]
+    copy [ 'images' ]
     FileUtils.mkdir_p(path(:destination)+'/_posts')
   end
 
@@ -32,9 +31,13 @@ class ExportFilter_jekyll < ExportFilter
 
     # get markdown content
     content = post.front_matter + post.markdown
+
+    # custom layout
+#    content.sub!(/^(layout: ).*/,'\1'+params[:post_layout] if post.post? and params[:post_layout]
   
     # write the post
-    write("_posts/#{post.date format: 'YYYY-MM-DD'}-#{post.filename}",content,post.update_timestamp)
+    prefix = post.page == 0 ? "_posts/#{post.date format: 'YYYY-MM-DD'}-" : ''
+    write(prefix+post.filename,content,post.update_timestamp)
 
   end
 
