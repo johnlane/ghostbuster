@@ -3,6 +3,7 @@ require 'optparse'
 require 'sqlite3'  # gem install sqlite3
 require 'yaml'
 require 'tmpdir'
+require 'cgi'
 class Environment
 
   # Default configuration applies to all environments unless customised
@@ -313,13 +314,17 @@ class Environment
     export_filters = []
     config(:export_filters).split(',').each do |f|
       f = f.to_s
+      if match = f.match(/(\S*?)\?(.*)/)
+        f = match[1]
+        parameters = CGI.parse(match[2]).each_with_object({}){|(k,v),h| h[k.to_sym] = v.first}
+      end
       log "Loading #{f} export filter"
       begin
         require_relative 'export_filters/export_'+f
       rescue LoadError
         abort("Failed to load export filter '#{f}'")
       end
-      export_filters << Object.const_get('ExportFilter_'+f).new(self)
+      export_filters << Object.const_get('ExportFilter_'+f).new(self,parameters)
     end
 
     # Run all posts through each filter

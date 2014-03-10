@@ -18,7 +18,7 @@ class ExportFilter_jekyll < ExportFilter
 
   include Helpers
 
-  def initialize(e)
+  def initialize(e,p={})
     super
     copy [ 'images' ]
     FileUtils.mkdir_p(path(:destination)+'/_posts')
@@ -33,7 +33,11 @@ class ExportFilter_jekyll < ExportFilter
     content = post.front_matter + post.markdown
 
     # custom layout
-#    content.sub!(/^(layout: ).*/,'\1'+params[:post_layout] if post.post? and params[:post_layout]
+    content.sub!(/^(layout: ).*/,'\1'+params[:page_layout]) if post.page? and params[:page_layout]
+    content.sub!(/^(layout: ).*/,'\1'+params[:post_layout]) if post.post? and params[:post_layout]
+
+     # Remove leading '/content' from URL paths
+     content.gsub!(/(!\[\]\(\/)CONTENT\//,'\1')
   
     # write the post
     prefix = post.page == 0 ? "_posts/#{post.date format: 'YYYY-MM-DD'}-" : ''

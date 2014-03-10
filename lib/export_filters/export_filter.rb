@@ -2,9 +2,10 @@ require 'fileutils'
 
 class ExportFilter
 
-  attr_reader :environment
-  def initialize(e)
+  attr_reader :environment, :params
+  def initialize(e,p={})
     @environment = e
+    @params = p
   end
 
   def setting(s) environment.setting(s) end
