@@ -3,7 +3,7 @@
 
   {% include head.html %}
 
-  <body>
+  <body class="theme-base-{% if page.theme %}{{ page.theme }}{%else%}red{% endif %} layout-reverse">
 
     {% include sidebar.html %}
 

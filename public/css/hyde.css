@@ -44,6 +44,11 @@ html {
     font-size: 20px;
   }
 }
+@font-face {
+    font-family: Underground;
+    src: url('../fonts/p22under.ttf') format('truetype');
+}
+
 
 
 /*
@@ -75,12 +80,19 @@ html {
   color: #fff;
 }
 
+/* Image */
+.sidebar-image {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* About section */
 .sidebar-about h1 {
   color: #fff;
   margin-top: 0;
-  font-family: "Abril Fatface", serif;
-  font-size: 3.25rem;
+  font-family: "Underground", sans-serif;
+  font-size: 2.25rem;
 }
 
 /* Sidebar nav */
@@ -248,3 +260,38 @@ a.sidebar-nav-item:focus {
 .theme-base-0f .related-posts li a:hover {
   color: #8f5536;
 }
+
+/* TubeLines */
+/* http://www.tfl.gov.uk/assets/downloads/corporate/tfl-colour-standard-issue03.pdf */
+.theme-base-blue .sidebar {
+  background-color: #009
+}
+.theme-base-blue .content a,
+.theme-base-blue .related-posts li a:hover {
+  color: #009;
+}
+
+.theme-base-red .sidebar {
+  background-color: #C33
+}
+.theme-base-red .content a,
+.theme-base-red .related-posts li a:hover {
+  color: #C33;
+}
+
+/* DLR */
+.theme-base-dlr .sidebar {
+  background-color: #099
+}
+.theme-base-dlr h1,
+.theme-base-dlr h2,
+.theme-base-dlr h3,
+.theme-base-dlr h4,
+.theme-base-dlr h5,
+.theme-base-dlr h6,
+.theme-base-dlr .content a,
+.theme-base-dlr .related-posts li a:hover {
+  color: #099;
+}
+
+

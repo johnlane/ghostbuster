@@ -6,14 +6,14 @@ pygments:         true
 permalink:        pretty
 
 # Setup
-title:            Hyde
-tagline:          'A Jekyll theme'
-description:      'A brazen two-column <a href="http://jekyllrb.com" target="_blank">Jekyll</a> theme that pairs a prominent sidebar with uncomplicated content. Made by <a href="https://twitter.com/mdo" target="_blank">@mdo</a>.'
-url:              http://hyde.getpoole.com
+title:            GhostBuster
+tagline:          'The Blog Exorcist'
+description:      'Export content from <a href="http://ghost.io" target="_blank">Ghost</a> blogs and re-publish elsewhere...<br>Made by <a href="https://johnlane.ie" target="_blank">John Lane</a>.'
+url:              http://johnlane.ie
 
 author:
-  name:           'Mark Otto'
-  url:            https://twitter.com/mdo
+  name:           'John Lane'
+  url:            https://twitter.com/followjohnlane
 
 paginate:         5
 
