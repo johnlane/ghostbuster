@@ -1,0 +1,24 @@
+# Dependencies
+markdown:         redcarpet
+pygments:         true
+
+# Permalinks
+permalink:        pretty
+
+# Setup
+title:            GhostBuster
+tagline:          'The Blog Exorcist'
+description:      'Export content from <a href="http://ghost.io" target="_blank">Ghost</a> blogs and re-publish elsewhere...<br>Made by <a href="https://johnlane.ie" target="_blank">John Lane</a>.'
+url:              http://johnlane.ie
+
+author:
+  name:           'John Lane'
+  url:            https://twitter.com/followjohnlane
+
+paginate:         5
+
+# Custom vars
+version:          2.0.0
+
+github:
+  repo:           https://github.com/poole/hyde
