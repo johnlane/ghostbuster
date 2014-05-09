@@ -24,7 +24,7 @@ class ExportFilter_middleman < ExportFilter
   # Output a post
   def export_post(post)
 
-    extend_post(post,'md')
+    extend_post(post,'html.md')
 
     # get markdown content
     content = post.front_matter + post.markdown
