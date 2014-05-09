@@ -1,0 +1,9 @@
+Jekyll Microsite:
+ ghost_environment: development
+ url: http://projects.johnlane.ie
+ destination:
+  git:///root/adm/git/johnlane.github.io?remote=ssh://git@johnlane.github.com/johnlane/johnlane.github.io?commit=false
+ filter: jekyll
+ with_tags: site-projects
+ hide_tags: site-projects
+ published: true

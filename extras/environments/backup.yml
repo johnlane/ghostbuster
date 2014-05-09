@@ -1,0 +1,9 @@
+#
+# Backup everything 
+#
+Backup:
+ ghost_environment: development # has no effect on backup, but is required
+ filter: backup
+ destination:
+   ssh://user@server/absolute/path/to/backup
+   rsync://server/service?rsync_args=--delete
