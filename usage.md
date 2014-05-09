@@ -5,6 +5,9 @@ date: 2014-03-10 09:59:33
 categories: private
 permalink: usage.html
 ---
+---
+theme: blue
+---
 ##### NAME
 
 `ghostbuster` - export and republish *Ghost* blogs
@@ -30,7 +33,7 @@ Each environment is defined by various `[OPTIONS]`, some of which are required a
 
 The command-line arguments define an environment that is separate and in
 addition to any environments defined in an environment file. If there are
-insifficient command-line arguments to define an environment then an environment is not defined from the command-line.
+insufficient command-line arguments to define an environment then an environment is not defined from the command-line.
 
 GhostBuster exits without action if no environments are defined.
 
@@ -69,11 +72,13 @@ GhostBuster uses *export filters* to export the content into different formats. 
   * `html` exports content as HTML along with images and other metadata. The HTML is derived from the active theme definition.
   * `html_basic` is similar but uses a static HTML template that is loosely based on the default 'Casper' theme. 
   * `jekyll` exports content ready for use as a [Jekyll](http://jekyllrb.com/) site.
+  * [middleman](/middleman) exports content ready for use as a [Middleman](http://middlemanapp.com) site.
   * `markdown` export post content to markdown text files.
   * `yaml` export post metadata to YAML text files (excludes content).
+  * `kramdown` processes Markdown into other formats including LaTeX.
   
 There is one other export filter that is special because it doesn't *export* anything: `backup` copies `config.js`, `ghostbuster.yml` and the entire `content` directory. This is sufficient to back up a Ghost system (it doesn't copy the Ghost core becuase this is easily reinstalled. 
-<small><span style="font-weight:bold">NOTE: </span>Because `backup` exports everything, the setting of `ghost-environment` has no effect on its output.</small>
+<small><span style="font-weight:bold">NOTE: </span>Because `backup` exports everything, the setting of `ghost-environment` has no effect on its output (it does, however, still need to be supplied with a valid value).</small>
  
 The HTML filters produce a set of files that is a static representation of the Ghost blog. The files can be used to serve a static HTML-only snapshot of the Ghost blog on a static web server.
 
@@ -242,5 +247,61 @@ Export Jekyll to GitHub. Include only published posts that have a specific tag a
 
     ghostbuster /srv/ghost file:///tmp/export --published --with-tags=microsite --hide-tags=microsite --export-filter=jekyll
 
+#### Middleman
+
+
+The `Middleman` filter generates the contents of the `source` directory in a Middleman project.
+
+```
+Middleman:
+ ghost_environment: development
+ destination: file:///home/myuser/middleman/blog/source
+ filter: middleman
+ published: true
+```
+
+Here is an example of using Middleman with a [Casper](https://github.com/danielbayerlein/middleman-casper) theme:
+```
+gem install middleman
+mkdir ~/.middleman
+git clone https://github.com/danielbayerlein/middleman-casper ~/.middleman/casper
+middleman init blog --template=casper
+cd blog
+```
+Then, from the server where Ghost is running (assuming a suitable environment similar to the above example is in `middleman.yml`):
+
+    ghostbuster -v -f middleman.yml
+
+And then, from the middleman blog:
+
+    middleman server
+
+and browse to `http://localhost:4567`.
+
+#### kramdown
+
+The `kramdown` filter can export to various formats. Specify the converter as a parameter to the `export_filter`, for example:
+    
+    export_filter: kramdown?convert=latex
+    
+If the `convert` parameter is not given, it defaults to `latex`.
+
+##### LaTeX
+
+Kramdown can generate LaTex. You can read about the LaTeX converter's options [here](http://kramdown.gettalong.org/converter/latex.html). They may be specified as parameters to the `export_filter`.
+
+By default, the LaTeX converter outputs just the converted content and not a complete LaTeX document. The `template` option must be supplied to select a *framework* - a value of `default` is sufficient to generate a complete document. Consult the kramdown documentation(http://kramdown.gettalong.org/converter/latex.html) for further details. An example GhostBuster environment to generate LaTeX is given below:
+
+    LaTeX:
+      destination: file:///home/myuser/ghostlatex
+      filter: kramdown?convert=latex&template=default
+
+The generated LaTeX can be used to generate other document formats: for example, PDF.
+
+    pdflatex file.tex
+    
+will produce `file.pdf`.
+
+Onward processing of LaTeX documents is beyond GhostBuster's scope.
 
 
