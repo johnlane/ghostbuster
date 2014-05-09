@@ -7,7 +7,7 @@ class ExportFilter_html < ExportFilter
 
   include Helpers
 
-  def initialize(e)
+  def initialize(e,p={})
     super
     abort "Cannot export HTML without an active theme" if setting(:activeTheme).nil?
     load
