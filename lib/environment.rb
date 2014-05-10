@@ -121,6 +121,11 @@ class Environment
           options[:export_filters] = f
         end
       
+        opts.on("--replace EXPRESSIONS", "Replace expressions to use (comma-separated)") do |r|
+          options[:replace] = r
+        end
+      
+        # Supplementary environments
         # Supplementary environments
         opts.on("-f", "--environment-file FILE", "Load environments from file") do |f|
           environments.concat(load_environment_file(f))
@@ -197,7 +202,7 @@ class Environment
             envs << options # add hash to environments array
           end
     end
-  
+
     def option_summary
      summary = "An environment requires these options:" + NL
      CONFIG_REQUIRED.each { |k| summary << '--'+k.to_s+NL }
@@ -241,6 +246,13 @@ class Environment
 
     # hold hidden tags as array
     @config[:hide_tags] = config(:hide_tags) ? config(:hide_tags).split(',') : []
+
+    # hold replace regexes as hash http://rubular.com/r/MYNXsibGh3
+    if config(:replace)
+      h = {}
+      config(:replace).scan(/([^\s]\w+):(.*?)(?=($|\s\w+:))/) { |k,v| h[k] = v }
+      @config[:replace] = h
+    end
 
     # Load Ghost configuration file
     do_or_die(gconfig = File.read(path(:config)),"read config ok","read config failed")

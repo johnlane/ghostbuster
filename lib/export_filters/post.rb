@@ -98,7 +98,7 @@ module Post
         value = join(f,t)
       else
         if has_key? f                 # if there is a key with this name, get its value
-          value = self[f]
+          value = replace(f,self[f])
         elsif f[-1,1] == 's'          # if key ends in s, try a join
           value = join(f)
           separator = modifiers(args)[:separator]
@@ -159,6 +159,24 @@ private
         end
         return modifiers
       end
+    end
+
+    # Takes a key and a value
+    # Looks for a replace expression associated with the key
+    # Applies any such replace expression to the value
+    # Returns the value
+    def replace(key,value)
+      debug("Begin #{key} replace on #{value}")
+      if expression = e.config(:replace)[key]
+        debug("Performing #{key} replace on '#{value}' => gsub(#{expression})")
+        begin
+          value = eval("value.gsub(#{expression})")
+        rescue SyntaxError => e
+          log("Syntax error in replace expression #{expression}")
+        end
+        debug("Value is now '#{value}'")
+      end
+      return value
     end
 
 end
