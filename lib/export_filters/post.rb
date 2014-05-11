@@ -167,7 +167,7 @@ private
     # Returns the value
     def replace(key,value)
       debug("Begin #{key} replace on #{value}")
-      if expression = e.config(:replace)[key]
+      if expression = e.config(:replace) ? e.config(:replace)[key] : nil
         debug("Performing #{key} replace on '#{value}' => gsub(#{expression})")
         begin
           value = eval("value.gsub(#{expression})")
