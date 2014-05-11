@@ -1,10 +1,13 @@
 ---
 layout: page
-title: "Ghost to Jekyll"
+title: Ghost to Jekyll
 date: 2014-05-09 15:06:56
 categories: private
 permalink: ghost-to-jekyll.html
+theme: green
 ---
+
+
 GhostBuster can export content that can be used in a [Jekyll](http://jekyllrb.com) project to build a static website.
 
 Publishing a Ghost site using Jekyll is a three-step process. First, prepare a Jekyll project, then use Ghostbuster to provide content and, finally, use Jekyll to publish it.

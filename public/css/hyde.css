@@ -49,8 +49,6 @@ html {
     src: url('../fonts/p22under.ttf') format('truetype');
 }
 
-
-
 /*
  * Sidebar
  *
@@ -267,6 +265,13 @@ a.sidebar-nav-item:focus {
   background-color: #009
 }
 .theme-base-blue .content a,
+.theme-base-blue .content code,
+.theme-base-blue h1,
+.theme-base-blue h2,
+.theme-base-blue h3,
+.theme-base-blue h4,
+.theme-base-blue h5,
+.theme-base-blue h6,
 .theme-base-blue .related-posts li a:hover {
   color: #009;
 }
@@ -275,10 +280,32 @@ a.sidebar-nav-item:focus {
   background-color: #C33
 }
 .theme-base-red .content a,
+.theme-base-red .content strong,
+.theme-base-red .content code,
+.theme-base-red h1,
+.theme-base-red h2,
+.theme-base-red h3,
+.theme-base-red h4,
+.theme-base-red h5,
+.theme-base-red h6,
 .theme-base-red .related-posts li a:hover {
   color: #C33;
 }
 
+.theme-base-green .sidebar {
+  background-color: #063
+}
+.theme-base-green .content a,
+.theme-base-green .content code,
+.theme-base-green h1,
+.theme-base-green h2,
+.theme-base-green h3,
+.theme-base-green h4,
+.theme-base-green h5,
+.theme-base-green h6,
+.theme-base-green .related-posts li a:hover {
+  color: #063;
+}
 /* DLR */
 .theme-base-dlr .sidebar {
   background-color: #099

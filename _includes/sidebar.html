@@ -27,9 +27,12 @@
         {% endif %}
       {% endfor %}
 
-      <li class="sidebar-nav-item"><a href="{{ site.github.repo }}/archive/v{{ site.version }}.zip">Download</a></li>
-      <li class="sidebar-nav-item"><a href="{{ site.github.repo }}">GitHub project</a></li>
-      <!--li class="sidebar-nav-item">Currently v{{ site.version }}</li-->
+      <br>
+      <li class="sidebar-nav-item">Get from</li>
+      <ul>
+      <li class="sidebar-nav-item"><a href="{{ site.rubygem }}">Ruby Gem</a></li>
+      <li class="sidebar-nav-item"><a href="{{ site.github.repo }}">Git Repo</a></li>
+      </ul>
     </ul>
 
     <p>&copy; {{ site.time | date: '%Y' }}. All rights reserved.</p>

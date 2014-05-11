@@ -1,9 +1,9 @@
 ---
 layout: page
-title: "About"
+title: About
 date: 2014-03-10 09:54:51
 categories: private
-permalink: about.html
+permalink: about-ghostbuster.html
 ---
 [Ghost](http://ghost.org) catalyses writing for web by making it easy to get on with writing. It's a fantastic, yet simple, plaform with a web-based content editor that is very easy to use. It gets out of the way and lets you focus on writing. It does, however, require a server-side installation that requires a [Node.js](http://nodejs.org/) platform. 
 

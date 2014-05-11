@@ -1,10 +1,13 @@
 ---
 layout: page
-title: "Middleman"
+title: Ghost to Middleman
 date: 2014-05-09 13:04:53
 categories: private
-permalink: middleman.html
+permalink: ghost-to-middleman.html
+theme: green
 ---
+
+
 GhostBuster can export content that can be used in a [Middleman](http://middlemanapp.com) project to build a static website.
 
 Publishing a Ghost site using Middleman is a three-step process. First, prepare a Middleman project, then use Ghostbuster to provide content and, finally, use Middleman to publish it.

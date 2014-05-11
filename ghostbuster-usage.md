@@ -1,13 +1,12 @@
 ---
 layout: page
-title: "Usage"
+title: Usage
 date: 2014-03-10 09:59:33
 categories: private
-permalink: usage.html
----
----
+permalink: ghostbuster-usage.html
 theme: blue
 ---
+
 ##### NAME
 
 `ghostbuster` - export and republish *Ghost* blogs
@@ -62,8 +61,12 @@ GhostBuster exits without action if no environments are defined.
 `-p` `--published` will export only published content.
 
 `-u` `--url` overrides the absolute URL of the blog that is written in the exported files.
+
 `--export-filter` lists the export filters to use (comma-separated). See the *EXPORT FILTERS* section below.
+
 `-f` `--environment-file` will load environments from the given file. See the *ENVIRONMENT FILE* section below.
+
+`--replace` lists replacement expressions to use (comma-separated). See the *REPLACEMENT EXPRESSIONS* section below.
 
 ### Export Filters
 
@@ -206,6 +209,7 @@ An example `ghostbuster.yml` file is shown below:
       filter:
         markdown
         yaml
+
 #### Multiple values
 
 Items that can take multiple values can be expressed in the environment file in four ways:
@@ -236,6 +240,27 @@ and
       - ftp:ftp.example.com
 
 Use whatever style best matches your personal taste. Multiple values given as command-line options must always be comma-delimited.
+
+### Replacement Expressions
+
+Replacement expressions can be used to alter the value of fields as they are exported from Ghost. The format of a replacement expression is:
+
+    field:old,new
+    
+where
+
+* `field` is any field in the GhostBuster *posts* table
+* `old` is used to match characters within the field's value and
+* `new` replaces any matched characters
+
+The `old` characters can be specified either as a text string or as a regular expression. [Rubular](http://rubular.com) is a useful resource that can help with forming suitable regular expressions. 
+
+Regular Expressions must be bounded with `/` and strings with `'`. The full syntax capabilities of `old:new` follow the rules described [here](http://ruby-doc.org/core-2.0/String.html#method-i-gsub).
+
+Every match of `old` found in the `field` is replaced with `new`. Badly formed replacement expressions are ignored. Replacement expressions could be used to alter, for example,
+
+* the post's title `title` or
+* its file name, whhich is derived from the `slug` field.
 
 ### Examples
 
