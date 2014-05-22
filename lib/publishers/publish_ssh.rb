@@ -20,7 +20,7 @@ private
     begin
       Net::SCP.start(host,user,pass) do |scp|
         log "Uploading"
-        scp.upload!(src+'/.',dest, recursive: true)
+        scp.upload!(src+'/.',dest, recursive: true, preserve: true)
         log "Done"
       end
     rescue Net::SSH::AuthenticationFailed, Net::SCP::Error => e
