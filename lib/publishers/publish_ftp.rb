@@ -1,15 +1,22 @@
 require 'net/ftp'
 require 'tempfile'
+require 'syncftp'
 
 class Publisher
 
 private
 
-  # FTP upload creates a compressed (bzip2) TAR archive of the export and uploads it
-  # to the remote server. A companion script on the server should extract the archive
-  # into the relevant location. An example is given in 'extras/ghostbuster-ftp-extract'
+  # FTP uploader works in two ways:
+  # (a) - the default - is to use syncftp to synchronise the remote ftp site with the
+  #       export, deleting anything on the remote that is not present in the export.
+  # (b) - if the URI parameter "tar=true" is given, create a compressed (bzip2) TAR
+  # archive of the export and upload it to the remote server. A companion script on
+  # the server should extract the archive into the relevant location. An example is
+  # given in 'extras/ghostbuster-ftp-extract'
   def ftp(src,uri)
     log "Publishing #{src} to #{uri}..."
+
+    params = params(uri)
     
     host = uri.host
 
@@ -26,18 +33,27 @@ private
 
     end
 
-    log "Creating archive for FTP upload"
-    archive = Tempfile.new("ghostbuster-publish-")
-    %x(tar jcf #{archive.path} -C #{src} .) 
+    if params[:tar] and params[:tar][0] == 'true'
 
-    log "Connecting to #{host}"
-    Net::FTP.open(host) do |ftp|
-      do_or_die(ftp.login(user, password), "Authenticated", "Login failed")
-      ftp.chdir(uri.path) unless uri.path.empty?
-      log "Uploading"
-      ftp.putbinaryfile(archive.path)
-      ftp.close
-      log "Done"
+      log "Creating archive for FTP upload"
+      archive = Tempfile.new("ghostbuster-publish-")
+      %x(tar jcf #{archive.path} -C #{src} .) 
+
+      log "Connecting to #{host}"
+      Net::FTP.open(host) do |ftp|
+        do_or_die(ftp.login(user, password), "Authenticated", "Login failed")
+        ftp.chdir(uri.path) unless uri.path.empty?
+        log "Uploading"
+        ftp.putbinaryfile(archive.path)
+        ftp.close
+        log "Done"
+      end
+
+    else
+      log "Connecting to #{host}"
+      do_or_die(ftp = SyncFTP.new(host, username: user, password: password), "Authenticated", "Login failed")
+      log "Syncing local:#{src} to remote:#{uri.path}"
+      ftp.sync(local:src, remote:uri.path)
     end
   end
 
