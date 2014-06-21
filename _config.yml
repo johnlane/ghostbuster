@@ -8,8 +8,8 @@ permalink:        pretty
 # Setup
 title:            GhostBuster
 tagline:          'The Blog Exorcist'
-description:      'Export content from <a href="http://ghost.io" target="_blank">Ghost</a> blogs and re-publish elsewhere...<br>Made by <a href="https://johnlane.ie" target="_blank">John Lane</a>.'
-url:              http://johnlane.ie
+description:      'Export content from <a href="http://ghost.io" target="_blank">Ghost</a> blogs and re-publish elsewhere...<br>Made by <a href="http://johnlane.ie" target="_blank">John Lane</a>.'
+url:              http://ghostbuster.johnlane.ie
 
 author:
   name:           'John Lane'
@@ -21,6 +21,6 @@ paginate:         5
 version:          2.0.0
 
 github:
-  repo:           https://github.com/johnlane
+  repo:           https://github.com/johnlane/ghostbuster
 
 gem:              http://rubygems.org/gems/ghostbuster
