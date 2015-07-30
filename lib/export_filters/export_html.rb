@@ -146,8 +146,12 @@ private
     # Remove post Handlebars wrappers
     post_html.gsub!(/{{[#\/]post}}/,'')
 
+    # Escape any content that gsub might misinterpret as backreferences
+    # http://stackoverflow.com/questions/3340395/using-rubys-gsub-with-a-string-containing-0
+    regex_escaped_html = post.html.gsub(/(\\\d)/,'\\\\\1');
+
     # Insert the post content
-    post_html.gsub!(/{{content}}/,post.html)
+    post_html.gsub!(/{{content}}/,regex_escaped_html)
 
     # Substitute handlebars if/else blocks where the "if" checks a field
     # when expression looks for field f, this tests for presence of f or f_id
