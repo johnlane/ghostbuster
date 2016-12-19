@@ -139,6 +139,7 @@ The publishers will attempt to obtain login credentials (username and password) 
 
 The `ssh` and `sftp` publishers will use keys held by an SSH agent for authentication if Ghostbuster's envorironment was started with `SSH_AUTH_SOCK` defined and pointing at an agent. If `user` is not supplied then the user that Ghostbuster runs as is used. The path specified is an absolute path. 
 
+<small><small><span style="color:red"><span style="font-weight:bold">NOTE: </span>That <code style="color:red">file://relative/path</code> does not work is a known issue.</span></small></small>
 
 <small><span style="font-weight:bold">TIP: </span>To start the agent, set `SSH_AUTH_SOCK` and load a key into the agent (requesting the key's passphrase if it has one):
 
