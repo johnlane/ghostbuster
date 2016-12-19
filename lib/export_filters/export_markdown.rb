@@ -4,7 +4,7 @@ class ExportFilter_markdown < ExportFilter
 
   include Helpers
 
-  def initialize(e)
+  def initialize(e,p={})
     super
     load
   end

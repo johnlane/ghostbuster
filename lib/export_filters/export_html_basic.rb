@@ -7,7 +7,7 @@ class ExportFilter_html_basic < ExportFilter
 
   include Helpers
 
-  def initialize(e)
+  def initialize(e,p={})
     super
     prepare_html
     assets = 'themes/'+(setting(:activeTheme) ? setting(:activeTheme) : 'casper')+'//assets/'
