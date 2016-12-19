@@ -262,6 +262,12 @@ Every match of `old` found in the `field` is replaced with `new`. Badly formed r
 * the post's title `title` or
 * its file name, whhich is derived from the `slug` field.
 
+To specify multiple replacement expressions, use a single whitespace-separated string like this example:{% assign openTag = '{%' %}
+
+    replace: "markdown:/{% raw %}({{|}}){% endraw %}/,'{{ openTag }} raw %}\\1{{ openTag }} endraw %}' title:':',' - '"
+
+This example supplies two replacement expressions, the first applies to the `markdown` field and the second to the `title` field. It demonstrates use of regular expressions, strings and match variables.
+
 ### Examples
 
 Export HTML from development, include published posts except those tagged as *private*:

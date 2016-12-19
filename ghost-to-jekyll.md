@@ -112,3 +112,20 @@ Check all's well
 and point your browser to `http://localhost:4000`. 
 
 [Ghostbuster, Jekyll and Hyde]() documents the production of the GhostBuster website for those interested in such things.
+
+#### Troubleshooting
+
+[//]: # (nasty hack see http://blog.slaks.net/2013-06-10/jekyll-endraw-in-code)
+{% assign openTag = '{%' %}
+
+The Jekyll front-matter includes the post title but it doesn't allow colons in the title text. This can be remedied with a replacement expression that substitutes a hyphen.:
+
+    replace: "title:':',' - '"
+
+The Jekyll parser can be confused by posts that contain Jekyll markup (as would happen in a post explaining how to use Jekyll markup!). The solution to this problem is apply Jekyll raw stanzas around such markup that is enclosed within double-braces. Again, a replacement expression is useful here:
+
+    replace: "markdown:/{% raw %}({{|}}){% endraw %}/,'{{ openTag }} raw %}\\1{{ openTag }} endraw %}'"
+
+It will most likely be useful to apply both expressions, like this:
+
+    replace: "markdown:/{% raw %}({{|}}){% endraw %}/,'{{ openTag }} raw %}\\1{{ openTag }} endraw %}' title:':',' - '"
